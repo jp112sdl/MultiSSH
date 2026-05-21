@@ -1063,21 +1063,37 @@ struct AddFolderView: View {
             Section("Folder Details") {
                 TextField("Name", text: $name)
                 
-                Picker("Color", selection: $colorHex) {
-                    ForEach(availableColors, id: \.1) { colorName, hex in
-                        HStack {
-                            Circle()
-                                .fill(Color(hex: hex))
-                                .frame(width: 12, height: 12)
-                            Text(colorName)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Color")
+                        .font(.headline)
+                    
+                    HStack(spacing: 12) {
+                        ForEach(availableColors, id: \.1) { colorName, hex in
+                            Button {
+                                colorHex = hex
+                            } label: {
+                                Circle()
+                                    .fill(Color(hex: hex))
+                                    .frame(width: 32, height: 32)
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(colorHex == hex ? Color.primary : Color.clear, lineWidth: 3)
+                                    )
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .help(colorName)
                         }
-                        .tag(hex)
                     }
                 }
+                .padding(.vertical, 4)
             }
         }
         .formStyle(.grouped)
-        .frame(width: 360, height: 200)
+        .frame(width: 420, height: 220)
         .navigationTitle("New Folder")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -1116,17 +1132,33 @@ struct EditFolderView: View {
             Section("Folder Details") {
                 TextField("Name", text: $folder.name)
                 
-                Picker("Color", selection: $folder.colorHex) {
-                    ForEach(availableColors, id: \.1) { colorName, hex in
-                        HStack {
-                            Circle()
-                                .fill(Color(hex: hex))
-                                .frame(width: 12, height: 12)
-                            Text(colorName)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Color")
+                        .font(.headline)
+                    
+                    HStack(spacing: 12) {
+                        ForEach(availableColors, id: \.1) { colorName, hex in
+                            Button {
+                                folder.colorHex = hex
+                            } label: {
+                                Circle()
+                                    .fill(Color(hex: hex))
+                                    .frame(width: 32, height: 32)
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(folder.colorHex == hex ? Color.primary : Color.clear, lineWidth: 3)
+                                    )
+                                    .overlay(
+                                        Circle()
+                                            .strokeBorder(Color.primary.opacity(0.2), lineWidth: 1)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .help(colorName)
                         }
-                        .tag(hex)
                     }
                 }
+                .padding(.vertical, 4)
             }
             
             Section("Connections") {
@@ -1135,7 +1167,7 @@ struct EditFolderView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 360, height: 220)
+        .frame(width: 420, height: 280)
         .navigationTitle("Edit Folder")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
