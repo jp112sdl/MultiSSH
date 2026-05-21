@@ -32,9 +32,37 @@ struct ContentView: View {
     @State private var showSyntaxSettings = false
     @State private var dropTargetFolder: ConnectionFolder?
     @State private var isDropTargetingUnfoldered = false
+    @State private var detailViewSize: CGSize = .zero
 
     private var columns: [GridItem] {
-        [GridItem(.adaptive(minimum: syncResize ? terminalWidth : 380), spacing: 8)]
+        let count = manager.sessions.count
+        guard count > 0 else { return [GridItem(.flexible())] }
+        
+        // Calculate optimal grid layout
+        let cols = Int(ceil(sqrt(Double(count))))
+        return Array(repeating: GridItem(.flexible(), spacing: 8), count: cols)
+    }
+    
+    private func calculateDynamicSize() -> CGSize {
+        let count = manager.sessions.count
+        guard count > 0 else { return CGSize(width: 380, height: 260) }
+        
+        // Calculate grid dimensions
+        let cols = Int(ceil(sqrt(Double(count))))
+        let rows = Int(ceil(Double(count) / Double(cols)))
+        
+        // Account for padding and spacing
+        let horizontalPadding: CGFloat = 16 // 8px on each side
+        let verticalPadding: CGFloat = 16
+        let spacing: CGFloat = 8
+        
+        let availableWidth = max(detailViewSize.width - horizontalPadding - (CGFloat(cols - 1) * spacing), 300)
+        let availableHeight = max(detailViewSize.height - verticalPadding - (CGFloat(rows - 1) * spacing), 200)
+        
+        let width = availableWidth / CGFloat(cols)
+        let height = availableHeight / CGFloat(rows)
+        
+        return CGSize(width: width, height: height)
     }
     
     // Organize connections by folder
@@ -94,6 +122,22 @@ struct ContentView: View {
     private func allConnected(in folder: ConnectionFolder) -> Bool {
         !folder.connections.isEmpty && folder.connections.allSatisfy { manager.session(for: $0) != nil }
     }
+    
+    // Clone a connection
+    private func cloneConnection(_ connection: SSHConnection) {
+        let clonedConnection = SSHConnection(
+            name: "\(connection.name) Copy",
+            host: connection.host,
+            port: connection.port,
+            username: connection.username,
+            useKeyAuth: connection.useKeyAuth,
+            identityFile: connection.identityFile,
+            password: connection.password,
+            folder: connection.folder
+        )
+        modelContext.insert(clonedConnection)
+        try? modelContext.save()
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -108,6 +152,7 @@ struct ContentView: View {
                                 onConnect: { manager.connect(connection) },
                                 onDisconnect: { manager.disconnect(connection) },
                                 onEdit: { editingConnection = connection },
+                                onClone: { cloneConnection(connection) },
                                 onDelete: {
                                     manager.disconnect(connection)
                                     connection.deletePassword()
@@ -150,6 +195,7 @@ struct ContentView: View {
                                     onConnect: { manager.connect(connection) },
                                     onDisconnect: { manager.disconnect(connection) },
                                     onEdit: { editingConnection = connection },
+                                    onClone: { cloneConnection(connection) },
                                     onDelete: {
                                         manager.disconnect(connection)
                                         connection.deletePassword()
@@ -297,105 +343,114 @@ struct ContentView: View {
                 }
             }
         } detail: {
-            VStack(spacing: 0) {
-                if manager.sessions.isEmpty {
-                    ContentUnavailableView(
-                        "No Active Connections",
-                        systemImage: "terminal",
-                        description: Text("Connect to a server from the sidebar to get started")
-                    )
-                } else {
-                    // Toolbar for sync resize control
-                    HStack {
-                        Toggle("Sync resize", isOn: $syncResize)
-                            .toggleStyle(.checkbox)
-                            .font(.caption)
-                            .help("Resize all terminal windows together")
-                        
-                        if syncResize {
-                            Text("W:")
+            GeometryReader { geometry in
+                VStack(spacing: 0) {
+                    if manager.sessions.isEmpty {
+                        ContentUnavailableView(
+                            "No Active Connections",
+                            systemImage: "terminal",
+                            description: Text("Connect to a server from the sidebar to get started")
+                        )
+                    } else {
+                        // Toolbar for sync resize control
+                        HStack {
+                            Toggle("Auto-scale", isOn: $syncResize)
+                                .toggleStyle(.checkbox)
                                 .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Slider(value: $terminalWidth, in: 300...1024, step: 10)
-                                .frame(width: 100)
-                            Text("\(Int(terminalWidth))px")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 45, alignment: .leading)
+                                .help("Automatically scale terminals to fill available space")
                             
-                            Text("H:")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Slider(value: $terminalHeight, in: 200...1024, step: 10)
-                                .frame(width: 100)
-                            Text("\(Int(terminalHeight))px")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 45, alignment: .leading)
-                        }
-                        
-                        Divider()
-                            .frame(height: 16)
-                        
-                        Text("Font:")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Slider(value: $fontSize, in: 8...24, step: 1)
-                            .frame(width: 100)
-                        Text("\(Int(fontSize))pt")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .frame(width: 35, alignment: .leading)
-                        Button {
-                            fontSize = 11
-                        } label: {
-                            Image(systemName: "arrow.counterclockwise")
-                                .font(.caption)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Reset font size to 11pt")
-                        
-                        Divider()
-                            .frame(height: 16)
-                        
-                        Button {
-                            showSyntaxSettings = true
-                        } label: {
-                            Image(systemName: "paintbrush")
-                                .font(.caption)
-                        }
-                        .buttonStyle(.plain)
-                        .help("Syntax highlighting settings")
-                        
-                        Spacer()
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .background(Color(NSColor.controlBackgroundColor))
-                    
-                    Divider()
-                    
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 8) {
-                            ForEach(manager.sessions) { session in
-                                TerminalPaneView(
-                                    session: session,
-                                    width: syncResize ? $terminalWidth : .constant(terminalWidth),
-                                    height: syncResize ? $terminalHeight : .constant(terminalHeight),
-                                    fontSize: fontSize,
-                                    syntaxHighlights: manager.syntaxHighlights,
-                                    onDisconnect: {
-                                        manager.disconnect(session.connection)
-                                    }
-                                )
+                            if !syncResize {
+                                Text("W:")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Slider(value: $terminalWidth, in: 300...1024, step: 10)
+                                    .frame(width: 100)
+                                Text("\(Int(terminalWidth))px")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 45, alignment: .leading)
+                                
+                                Text("H:")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                Slider(value: $terminalHeight, in: 200...1024, step: 10)
+                                    .frame(width: 100)
+                                Text("\(Int(terminalHeight))px")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 45, alignment: .leading)
                             }
+                            
+                            Divider()
+                                .frame(height: 16)
+                            
+                            Text("Font:")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Slider(value: $fontSize, in: 8...24, step: 1)
+                                .frame(width: 100)
+                            Text("\(Int(fontSize))pt")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 35, alignment: .leading)
+                            Button {
+                                fontSize = 11
+                            } label: {
+                                Image(systemName: "arrow.counterclockwise")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Reset font size to 11pt")
+                            
+                            Divider()
+                                .frame(height: 16)
+                            
+                            Button {
+                                showSyntaxSettings = true
+                            } label: {
+                                Image(systemName: "paintbrush")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
+                            .help("Syntax highlighting settings")
+                            
+                            Spacer()
                         }
-                        .padding(8)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color(NSColor.controlBackgroundColor))
+                        
+                        Divider()
+                        
+                        ScrollView {
+                            let dynamicSize = calculateDynamicSize()
+                            LazyVGrid(columns: columns, spacing: 8) {
+                                ForEach(manager.sessions) { session in
+                                    TerminalPaneView(
+                                        session: session,
+                                        width: syncResize ? .constant(dynamicSize.width) : $terminalWidth,
+                                        height: syncResize ? .constant(dynamicSize.height) : $terminalHeight,
+                                        fontSize: fontSize,
+                                        syntaxHighlights: manager.syntaxHighlights,
+                                        onDisconnect: {
+                                            manager.disconnect(session.connection)
+                                        }
+                                    )
+                                }
+                            }
+                            .padding(8)
+                        }
+                    }
+
+                    if !manager.sessions.isEmpty {
+                        BroadcastInputView(manager: manager)
                     }
                 }
-
-                if !manager.sessions.isEmpty {
-                    BroadcastInputView(manager: manager)
+                .onAppear {
+                    detailViewSize = geometry.size
+                }
+                .onChange(of: geometry.size) { _, newSize in
+                    detailViewSize = newSize
                 }
             }
         }
@@ -429,6 +484,7 @@ struct ConnectionRowView: View {
     let onConnect: () -> Void
     let onDisconnect: () -> Void
     let onEdit: () -> Void
+    let onClone: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -452,15 +508,47 @@ struct ConnectionRowView: View {
                         .foregroundStyle(Color.accentColor)
                 }
             }
-            Text("\(connection.username)@\(connection.host):\(connection.port)")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+           // Text("\(connection.username)@\(connection.host):\(connection.port)")
+           //     .font(.caption)
+           //     .foregroundStyle(.secondary)
         }
         .padding(.vertical, 2)
         .contextMenu {
-            Button("Edit", action: onEdit)
+            Button {
+                onConnect()
+            } label: {
+                Label("Connect", systemImage: "play.circle")
+            }
+            .disabled(isConnected)
+            
+            Button {
+                onDisconnect()
+            } label: {
+                Label("Disconnect", systemImage: "stop.circle")
+            }
+            .disabled(!isConnected)
+            
             Divider()
-            Button("Delete", role: .destructive, action: onDelete)
+            
+            Button {
+                onEdit()
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+            
+            Button {
+                onClone()
+            } label: {
+                Label("Duplicate", systemImage: "doc.on.doc")
+            }
+            
+            Divider()
+            
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
         }
         .draggable(TransferableConnectionID(id: connection.id.hashValue.description)) {
             // Preview view shown while dragging
@@ -931,7 +1019,7 @@ struct AddConnectionView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 450)
+        .frame(width: 440, height: 460)
         .navigationTitle("Add Connection")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -1018,7 +1106,7 @@ struct EditConnectionView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 370)
+        .frame(width: 440, height: 460)
         .navigationTitle("Edit: \(connection.name)")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
