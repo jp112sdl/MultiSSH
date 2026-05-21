@@ -9,6 +9,8 @@ Organize your SSH connections into folders for better management. Group servers 
 ✅ **Unlimited Folders**: Create as many folders as you need
 ✅ **Color Coding**: Each folder has a customizable color for quick visual identification  
 ✅ **Drag & Drop**: Move connections between folders with drag and drop
+✅ **Connect All / Disconnect All**: Bulk connect or disconnect all servers in a folder
+✅ **Collapsible Folders**: Expand/collapse to reduce clutter
 ✅ **Automatic Sorting**: Connections within folders are sorted alphabetically
 ✅ **Unfoldered Connections**: Connections without a folder appear at the top
 
@@ -61,6 +63,48 @@ You can change:
 3. Confirm deletion
 
 **Note**: Deleting a folder does NOT delete the connections inside it. They will be moved to the "unfoldered" section at the top.
+
+## Bulk Operations
+
+### Connect All Servers in a Folder
+
+Connect to all servers in a folder with a single click:
+
+**Method 1: Header Button**
+- Click the green **▶️** (play) button in the folder header
+- All disconnected servers in the folder will connect
+
+**Method 2: Context Menu**
+- Right-click on the folder header
+- Select **"Connect All"**
+
+**Notes:**
+- The button only appears when at least one server is disconnected
+- Servers connect sequentially (not parallel)
+- Already-connected servers are skipped
+
+### Disconnect All Sessions in a Folder
+
+Disconnect all active sessions in a folder:
+
+**Method 1: Header Button**
+- Click the red **⏹** (stop) button in the folder header
+- All active sessions in the folder will disconnect
+
+**Method 2: Context Menu**
+- Right-click on the folder header
+- Select **"Disconnect All"**
+
+**Notes:**
+- The button only appears when at least one session is active
+- Sessions disconnect immediately
+- Already-disconnected servers are skipped
+
+**Use Cases:**
+- **Morning routine**: Connect all monitoring servers at once
+- **Deployments**: Connect all web servers, run updates via broadcast, disconnect all
+- **End of day**: Quickly disconnect all active sessions
+- **Environment switching**: Disconnect staging, connect production
 
 ## Using Drag and Drop
 

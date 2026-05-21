@@ -66,6 +66,34 @@ struct ContentView: View {
         
         return true
     }
+    
+    // Helper to connect all connections in a folder
+    private func connectAll(in folder: ConnectionFolder) {
+        for connection in folder.connections {
+            if manager.session(for: connection) == nil {
+                manager.connect(connection)
+            }
+        }
+    }
+    
+    // Helper to disconnect all connections in a folder
+    private func disconnectAll(in folder: ConnectionFolder) {
+        for connection in folder.connections {
+            if manager.session(for: connection) != nil {
+                manager.disconnect(connection)
+            }
+        }
+    }
+    
+    // Check if any connection in folder is connected
+    private func hasConnectedSessions(in folder: ConnectionFolder) -> Bool {
+        folder.connections.contains { manager.session(for: $0) != nil }
+    }
+    
+    // Check if all connections in folder are connected
+    private func allConnected(in folder: ConnectionFolder) -> Bool {
+        !folder.connections.isEmpty && folder.connections.allSatisfy { manager.session(for: $0) != nil }
+    }
 
     var body: some View {
         NavigationSplitView {
@@ -131,36 +159,88 @@ struct ContentView: View {
                             }
                         }
                     } header: {
-                        Button {
-                            toggleFolderCollapse(folder)
-                        } label: {
-                            HStack {
-                                Image(systemName: isFolderCollapsed(folder) ? "chevron.right" : "chevron.down")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Circle()
-                                    .fill(folder.color)
-                                    .frame(width: 8, height: 8)
-                                Text(folder.name)
-                                    .font(.headline)
-                                Spacer()
-                                Button {
-                                    editingFolder = folder
-                                } label: {
-                                    Image(systemName: "pencil")
+                        HStack {
+                            Button {
+                                toggleFolderCollapse(folder)
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: isFolderCollapsed(folder) ? "chevron.right" : "chevron.down")
                                         .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Circle()
+                                        .fill(folder.color)
+                                        .frame(width: 8, height: 8)
+                                    Text(folder.name)
+                                        .font(.headline)
                                 }
-                                .buttonStyle(.plain)
                             }
+                            .buttonStyle(.plain)
+                            
+                            Spacer()
+                            
+                            // Connect/Disconnect All buttons
+                            if !folder.connections.isEmpty {
+                                if hasConnectedSessions(in: folder) {
+                                    Button {
+                                        disconnectAll(in: folder)
+                                    } label: {
+                                        Image(systemName: "stop.circle.fill")
+                                            .font(.caption)
+                                            .foregroundStyle(.red)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Disconnect all sessions in this folder")
+                                }
+                                
+                                if !allConnected(in: folder) {
+                                    Button {
+                                        connectAll(in: folder)
+                                    } label: {
+                                        Image(systemName: "play.circle.fill")
+                                            .font(.caption)
+                                            .foregroundStyle(.green)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help("Connect all servers in this folder")
+                                }
+                            }
+                            
+                            Button {
+                                editingFolder = folder
+                            } label: {
+                                Image(systemName: "pencil")
+                                    .font(.caption)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
-                        .contentShape(Rectangle())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background(dropTargetFolder?.id == folder.id ? Color.accentColor.opacity(0.15) : Color.clear)
                         .cornerRadius(4)
                         .contextMenu {
                             Button(isFolderCollapsed(folder) ? "Expand" : "Collapse") {
                                 toggleFolderCollapse(folder)
                             }
+                            Divider()
+                            
+                            if !folder.connections.isEmpty {
+                                Button {
+                                    connectAll(in: folder)
+                                } label: {
+                                    Label("Connect All", systemImage: "play.circle.fill")
+                                }
+                                .disabled(allConnected(in: folder))
+                                
+                                Button {
+                                    disconnectAll(in: folder)
+                                } label: {
+                                    Label("Disconnect All", systemImage: "stop.circle.fill")
+                                }
+                                .disabled(!hasConnectedSessions(in: folder))
+                                
+                                Divider()
+                            }
+                            
                             Button("Edit Folder") { editingFolder = folder }
                             Divider()
                             Button("Delete Folder", role: .destructive) {
