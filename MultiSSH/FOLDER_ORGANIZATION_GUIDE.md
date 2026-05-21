@@ -8,7 +8,7 @@ Organize your SSH connections into folders for better management. Group servers 
 
 ✅ **Unlimited Folders**: Create as many folders as you need
 ✅ **Color Coding**: Each folder has a customizable color for quick visual identification  
-✅ **Drag & Drop**: (Future) Move connections between folders
+✅ **Drag & Drop**: Move connections between folders with drag and drop
 ✅ **Automatic Sorting**: Connections within folders are sorted alphabetically
 ✅ **Unfoldered Connections**: Connections without a folder appear at the top
 
@@ -30,7 +30,12 @@ Organize your SSH connections into folders for better management. Group servers 
 3. Select a folder from the **"Organization"** section
 4. Click **"Add"**
 
-**For existing connections:**
+**For existing connections (Method 1: Drag & Drop):**
+1. Click and drag a connection
+2. Drop it onto a folder header to add it to that folder
+3. Drop it on the "unfoldered" section at the top (or the "Drop here to remove from folder" area) to remove it from its current folder
+
+**For existing connections (Method 2: Edit Dialog):**
 1. Click the connection to edit it
 2. Change the **"Folder"** picker in the "Organization" section
 3. Click **"Done"**
@@ -56,6 +61,31 @@ You can change:
 3. Confirm deletion
 
 **Note**: Deleting a folder does NOT delete the connections inside it. They will be moved to the "unfoldered" section at the top.
+
+## Using Drag and Drop
+
+### Moving Connections Between Folders
+
+You can easily reorganize connections by dragging and dropping them:
+
+1. **Click and hold** on any connection row
+2. **Drag** it to the folder header where you want to move it
+3. The folder header will highlight when you hover over it
+4. **Release** to drop the connection into the folder
+
+### Removing Connections from Folders
+
+To move a connection out of a folder (make it unfoldered):
+
+1. **Drag** the connection from its current folder
+2. **Drop** it on the unfoldered section at the top, or
+3. If there are no unfoldered connections, drop it on the "Drop here to remove from folder" area
+
+### Visual Feedback
+
+- **Folder headers** highlight with a light blue background when you drag a connection over them
+- **Unfoldered section** highlights when you drag a connection over it
+- This makes it easy to see where your connection will be placed
 
 ## Folder Colors
 
@@ -191,8 +221,8 @@ Currently, there are no keyboard shortcuts for folder operations, but you can:
 ## Future Enhancements
 
 Potential improvements planned:
-- [ ] Drag and drop to move connections between folders
-- [ ] Collapsible folders (expand/collapse sections)
+- [ ] Collapsible folders (expand/collapse sections) ✅ **DONE**
+- [ ] Drag and drop to move connections between folders ✅ **DONE**
 - [ ] Folder search/filter
 - [ ] Bulk operations (connect all in folder)
 - [ ] Folder templates/presets

@@ -1,6 +1,17 @@
 import SwiftUI
 import SwiftData
 import AppKit
+import UniformTypeIdentifiers
+
+// MARK: - Transferable Connection ID
+
+struct TransferableConnectionID: Codable, Transferable {
+    let id: String
+    
+    static var transferRepresentation: some TransferRepresentation {
+        CodableRepresentation(contentType: .data)
+    }
+}
 
 // MARK: - Main View
 
@@ -19,6 +30,8 @@ struct ContentView: View {
     @State private var fontSize: CGFloat = 11
     @State private var collapsedFolders: Set<PersistentIdentifier> = []
     @State private var showSyntaxSettings = false
+    @State private var dropTargetFolder: ConnectionFolder?
+    @State private var isDropTargetingUnfoldered = false
 
     private var columns: [GridItem] {
         [GridItem(.adaptive(minimum: syncResize ? terminalWidth : 380), spacing: 8)]
@@ -39,6 +52,19 @@ struct ContentView: View {
         } else {
             collapsedFolders.insert(folder.id)
         }
+    }
+    
+    // Helper to handle connection drops
+    private func handleDrop(items: [TransferableConnectionID], targetFolder: ConnectionFolder?) -> Bool {
+        guard let transferableID = items.first else { return false }
+        
+        // Find the connection in our list by comparing ID descriptions
+        if let connection = connections.first(where: { $0.id.hashValue.description == transferableID.id }) {
+            connection.folder = targetFolder
+            try? modelContext.save()
+        }
+        
+        return true
     }
 
     var body: some View {
@@ -61,6 +87,27 @@ struct ContentView: View {
                                 }
                             )
                         }
+                    }
+                    .listRowBackground(isDropTargetingUnfoldered ? Color.accentColor.opacity(0.2) : nil)
+                    .dropDestination(for: TransferableConnectionID.self) { items, location in
+                        handleDrop(items: items, targetFolder: nil)
+                    } isTargeted: { isTargeted in
+                        isDropTargetingUnfoldered = isTargeted
+                    }
+                } else if !folders.isEmpty {
+                    // Show a drop zone when there are no unfoldered connections
+                    Section {
+                        Text("Drop here to remove from folder")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 8)
+                    }
+                    .listRowBackground(isDropTargetingUnfoldered ? Color.accentColor.opacity(0.2) : nil)
+                    .dropDestination(for: TransferableConnectionID.self) { items, location in
+                        handleDrop(items: items, targetFolder: nil)
+                    } isTargeted: { isTargeted in
+                        isDropTargetingUnfoldered = isTargeted
                     }
                 }
                 
@@ -108,6 +155,8 @@ struct ContentView: View {
                         }
                         .buttonStyle(.plain)
                         .contentShape(Rectangle())
+                        .background(dropTargetFolder?.id == folder.id ? Color.accentColor.opacity(0.15) : Color.clear)
+                        .cornerRadius(4)
                         .contextMenu {
                             Button(isFolderCollapsed(folder) ? "Expand" : "Collapse") {
                                 toggleFolderCollapse(folder)
@@ -121,6 +170,15 @@ struct ContentView: View {
                                 }
                                 modelContext.delete(folder)
                             }
+                        }
+                    }
+                    .dropDestination(for: TransferableConnectionID.self) { items, location in
+                        handleDrop(items: items, targetFolder: folder)
+                    } isTargeted: { isTargeted in
+                        if isTargeted {
+                            dropTargetFolder = folder
+                        } else if dropTargetFolder?.id == folder.id {
+                            dropTargetFolder = nil
                         }
                     }
                 }
@@ -323,6 +381,13 @@ struct ConnectionRowView: View {
             Button("Edit", action: onEdit)
             Divider()
             Button("Delete", role: .destructive, action: onDelete)
+        }
+        .draggable(TransferableConnectionID(id: connection.id.hashValue.description)) {
+            // Preview view shown while dragging
+            Label(connection.name, systemImage: "server.rack")
+                .padding(8)
+                .background(Color(NSColor.controlBackgroundColor))
+                .cornerRadius(8)
         }
     }
 }
