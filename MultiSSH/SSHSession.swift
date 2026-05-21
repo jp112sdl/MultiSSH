@@ -23,6 +23,12 @@ final class SSHSession: Identifiable {
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
 
+        // Use effective credentials (from saved credential or inline)
+        let username = connection.effectiveUsername
+        let useKeyAuth = connection.effectiveUseKeyAuth
+        let identityFile = connection.effectiveIdentityFile
+        let password = connection.effectivePassword
+
         var args: [String] = [
             "-tt",
             "-p", "\(connection.port)",
@@ -30,20 +36,20 @@ final class SSHSession: Identifiable {
             "-o", "ConnectTimeout=10",
             "-o", "ServerAliveInterval=30"
         ]
-        if connection.useKeyAuth && !connection.identityFile.isEmpty {
-            args += ["-i", connection.identityFile]
+        if useKeyAuth && !identityFile.isEmpty {
+            args += ["-i", identityFile]
         }
-        args.append("\(connection.username)@\(connection.host)")
+        args.append("\(username)@\(connection.host)")
         proc.arguments = args
 
         var env = ProcessInfo.processInfo.environment
         env["TERM"] = "xterm-256color"
 
         var askpassURL: URL?
-        if !connection.useKeyAuth && !connection.password.isEmpty {
+        if !useKeyAuth && !password.isEmpty {
             let url = URL(fileURLWithPath: NSTemporaryDirectory())
                 .appendingPathComponent("mssh_\(UUID().uuidString).sh")
-            let escaped = connection.password.replacingOccurrences(of: "'", with: "'\\''")
+            let escaped = password.replacingOccurrences(of: "'", with: "'\\''")
             try? "#!/bin/sh\necho '\(escaped)'\n".write(to: url, atomically: true, encoding: .utf8)
             try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: url.path)
             env["SSH_ASKPASS"] = url.path
@@ -91,7 +97,7 @@ final class SSHSession: Identifiable {
             }
         }
 
-        append("[Connecting to \(connection.username)@\(connection.host):\(connection.port)...]\r\n")
+        append("[Connecting to \(username)@\(connection.host):\(connection.port)...]\r\n")
 
         do {
             try proc.run()

@@ -11,7 +11,7 @@ import SwiftData
 @main
 struct MultiSSHApp: App {
     var sharedModelContainer: ModelContainer = {
-        let schema = Schema([SSHConnection.self, ConnectionFolder.self])
+        let schema = Schema([SSHConnection.self, ConnectionFolder.self, Credential.self])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         do {
             return try ModelContainer(for: schema, configurations: [modelConfiguration])

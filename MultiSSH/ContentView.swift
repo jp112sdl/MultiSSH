@@ -33,6 +33,7 @@ struct ContentView: View {
     @State private var dropTargetFolder: ConnectionFolder?
     @State private var isDropTargetingUnfoldered = false
     @State private var detailViewSize: CGSize = .zero
+    @State private var showCredentialManager = false
 
     private var columns: [GridItem] {
         let count = manager.sessions.count
@@ -314,6 +315,13 @@ struct ContentView: View {
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
                     Button {
+                        showCredentialManager = true
+                    } label: {
+                        Image(systemName: "key.fill")
+                    }
+                    .help("Credential manager")
+                    
+                    Button {
                         showSyntaxSettings = true
                     } label: {
                         Image(systemName: "paintbrush")
@@ -330,6 +338,12 @@ struct ContentView: View {
                             showAddFolder = true
                         } label: {
                             Label("New Folder", systemImage: "folder.badge.plus")
+                        }
+                        Divider()
+                        Button {
+                            showCredentialManager = true
+                        } label: {
+                            Label("Manage Credentials", systemImage: "key.fill")
                         }
                         Divider()
                         Button {
@@ -473,6 +487,9 @@ struct ContentView: View {
         .sheet(isPresented: $showSyntaxSettings) {
             SyntaxHighlightSettingsView(manager: manager)
         }
+        .sheet(isPresented: $showCredentialManager) {
+            CredentialManagerView()
+        }
     }
 }
 
@@ -508,9 +525,20 @@ struct ConnectionRowView: View {
                         .foregroundStyle(Color.accentColor)
                 }
             }
-           // Text("\(connection.username)@\(connection.host):\(connection.port)")
-           //     .font(.caption)
-           //     .foregroundStyle(.secondary)
+            HStack(spacing: 4) {
+                if let credential = connection.credential {
+                    Image(systemName: "key.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.blue)
+                    Text(credential.name)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text("\(connection.effectiveUsername)@\(connection.host):\(connection.port)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .padding(.vertical, 2)
         .contextMenu {
@@ -964,10 +992,13 @@ struct AddConnectionView: View {
     let folders: [ConnectionFolder]
     let onSave: (SSHConnection) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Credential.sortOrder) private var credentials: [Credential]
 
     @State private var name = ""
     @State private var host = ""
     @State private var port = "22"
+    @State private var useCredential = false
+    @State private var selectedCredential: Credential?
     @State private var username = ""
     @State private var useKeyAuth = true
     @State private var identityFile = ""
@@ -983,7 +1014,6 @@ struct AddConnectionView: View {
                         if name.isEmpty { name = host }
                     }
                 TextField("Port", text: $port)
-                TextField("Username", text: $username)
             }
             
             Section("Organization") {
@@ -1002,24 +1032,52 @@ struct AddConnectionView: View {
             }
 
             Section("Authentication") {
-                Picker("Method", selection: $useKeyAuth) {
-                    Text("SSH Key / Agent").tag(true)
-                    Text("Password").tag(false)
-                }
-                .pickerStyle(.segmented)
-
-                if useKeyAuth {
-                    HStack {
-                        TextField("Identity file (leave blank for default/agent)", text: $identityFile)
-                        Button("Browse…") { browseForKey() }
+                Toggle("Use Saved Credential", isOn: $useCredential)
+                    .onChange(of: useCredential) { oldValue, newValue in
+                        if newValue && selectedCredential == nil && !credentials.isEmpty {
+                            selectedCredential = credentials.first
+                        }
+                    }
+                
+                if useCredential {
+                    if credentials.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("No saved credentials")
+                                .foregroundStyle(.secondary)
+                            Text("Create credentials in the Credential Manager")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Picker("Credential", selection: $selectedCredential) {
+                            Text("Select...").tag(nil as Credential?)
+                            ForEach(credentials) { credential in
+                                Text(credential.displayText).tag(credential as Credential?)
+                            }
+                        }
                     }
                 } else {
-                    SecureField("Password", text: $password)
+                    TextField("Username", text: $username)
+                    
+                    Picker("Method", selection: $useKeyAuth) {
+                        Text("SSH Key / Agent").tag(true)
+                        Text("Password").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+
+                    if useKeyAuth {
+                        HStack {
+                            TextField("Identity file (leave blank for default/agent)", text: $identityFile)
+                            Button("Browse…") { browseForKey() }
+                        }
+                    } else {
+                        SecureField("Password", text: $password)
+                    }
                 }
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 460)
+        .frame(width: 480, height: useCredential ? 420 : 520)
         .navigationTitle("Add Connection")
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -1027,7 +1085,7 @@ struct AddConnectionView: View {
             }
             ToolbarItem(placement: .confirmationAction) {
                 Button("Add") { save() }
-                    .disabled(host.isEmpty || username.isEmpty)
+                    .disabled(host.isEmpty || (useCredential ? selectedCredential == nil : username.isEmpty))
             }
         }
     }
@@ -1047,11 +1105,12 @@ struct AddConnectionView: View {
             name: name.isEmpty ? host : name,
             host: host,
             port: Int(port) ?? 22,
-            username: username,
-            useKeyAuth: useKeyAuth,
-            identityFile: identityFile,
-            password: password,
-            folder: selectedFolder
+            username: useCredential ? "" : username,
+            useKeyAuth: useCredential ? true : useKeyAuth,
+            identityFile: useCredential ? "" : identityFile,
+            password: useCredential ? "" : password,
+            folder: selectedFolder,
+            credential: useCredential ? selectedCredential : nil
         )
         onSave(conn)
         dismiss()
@@ -1063,6 +1122,9 @@ struct EditConnectionView: View {
     @Bindable var connection: SSHConnection
     let folders: [ConnectionFolder]
     @Environment(\.dismiss) private var dismiss
+    @Query(sort: \Credential.sortOrder) private var credentials: [Credential]
+    
+    @State private var useCredential: Bool = false
 
     var body: some View {
         Form {
@@ -1070,7 +1132,6 @@ struct EditConnectionView: View {
                 TextField("Display name", text: $connection.name)
                 TextField("Hostname or IP", text: $connection.host)
                 TextField("Port", value: $connection.port, format: .number)
-                TextField("Username", text: $connection.username)
             }
             
             Section("Organization") {
@@ -1089,29 +1150,64 @@ struct EditConnectionView: View {
             }
 
             Section("Authentication") {
-                Picker("Method", selection: $connection.useKeyAuth) {
-                    Text("SSH Key / Agent").tag(true)
-                    Text("Password").tag(false)
-                }
-                .pickerStyle(.segmented)
-
-                if connection.useKeyAuth {
-                    HStack {
-                        TextField("Identity file (leave blank for default/agent)", text: $connection.identityFile)
-                        Button("Browse…") { browseForKey() }
+                Toggle("Use Saved Credential", isOn: $useCredential)
+                    .onChange(of: useCredential) { oldValue, newValue in
+                        if newValue {
+                            if connection.credential == nil && !credentials.isEmpty {
+                                connection.credential = credentials.first
+                            }
+                        } else {
+                            connection.credential = nil
+                        }
+                    }
+                
+                if useCredential {
+                    if credentials.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("No saved credentials")
+                                .foregroundStyle(.secondary)
+                            Text("Create credentials in the Credential Manager")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    } else {
+                        Picker("Credential", selection: $connection.credential) {
+                            Text("Select...").tag(nil as Credential?)
+                            ForEach(credentials) { credential in
+                                Text(credential.displayText).tag(credential as Credential?)
+                            }
+                        }
                     }
                 } else {
-                    SecureField("Password", text: $connection.password)
+                    TextField("Username", text: $connection.username)
+                    
+                    Picker("Method", selection: $connection.useKeyAuth) {
+                        Text("SSH Key / Agent").tag(true)
+                        Text("Password").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+
+                    if connection.useKeyAuth {
+                        HStack {
+                            TextField("Identity file (leave blank for default/agent)", text: $connection.identityFile)
+                            Button("Browse…") { browseForKey() }
+                        }
+                    } else {
+                        SecureField("Password", text: $connection.password)
+                    }
                 }
             }
         }
         .formStyle(.grouped)
-        .frame(width: 440, height: 460)
+        .frame(width: 480, height: useCredential ? 420 : 520)
         .navigationTitle("Edit: \(connection.name)")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
                 Button("Done") { dismiss() }
             }
+        }
+        .onAppear {
+            useCredential = connection.credential != nil
         }
     }
 
