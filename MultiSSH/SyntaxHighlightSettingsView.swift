@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 struct SyntaxHighlightSettingsView: View {
     @Bindable var manager: ConnectionManager
@@ -9,8 +10,10 @@ struct SyntaxHighlightSettingsView: View {
     @State private var newColor: Color = .red
     @State private var editingKeyword: String?
     @State private var showingClearConfirmation = false
-    @State private var showingResetConfirmation = false
     @State private var searchText = ""
+    @State private var showingImportError = false
+    @State private var importErrorMessage = ""
+    @State private var showingImportOptions = false
     
     var filteredKeywords: [String] {
         let keywords = Array(manager.syntaxHighlights.keys.sorted())
@@ -123,17 +126,37 @@ struct SyntaxHighlightSettingsView: View {
                     
                     if !manager.syntaxHighlights.isEmpty {
                         Menu {
+                            Button {
+                                exportHighlights()
+                            } label: {
+                                Label("Export Keywords...", systemImage: "square.and.arrow.up")
+                            }
+                            
+                            Button {
+                                importHighlights()
+                            } label: {
+                                Label("Import Keywords...", systemImage: "square.and.arrow.down")
+                            }
+                            
+                            Divider()
+                            
                             Button("Clear All Keywords") {
                                 showingClearConfirmation = true
-                            }
-                            Button("Reset to Defaults") {
-                                showingResetConfirmation = true
                             }
                         } label: {
                             Image(systemName: "ellipsis.circle")
                         }
                         .menuStyle(.borderlessButton)
                         .frame(width: 24, height: 24)
+                    } else {
+                        // Show import button when empty
+                        Button {
+                            importHighlights()
+                        } label: {
+                            Label("Import", systemImage: "square.and.arrow.down")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.borderless)
                     }
                 }
                 
@@ -178,30 +201,37 @@ struct SyntaxHighlightSettingsView: View {
             
             Divider()
             
-            // Presets section
+            // Import/Export section
             VStack(alignment: .leading, spacing: 8) {
-                Text("Quick Presets")
+                Text("Import & Export")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                    PresetButton(title: "System Logs", icon: "doc.text", color: .red) {
-                        applySystemLogsPreset()
+                HStack(spacing: 12) {
+                    Button {
+                        exportHighlights()
+                    } label: {
+                        Label("Export to File", systemImage: "square.and.arrow.up")
+                            .frame(maxWidth: .infinity)
                     }
-                    PresetButton(title: "Git Output", icon: "arrow.triangle.branch", color: .purple) {
-                        applyGitPreset()
-                    }
-                    PresetButton(title: "Docker", icon: "shippingbox", color: .blue) {
-                        applyDockerPreset()
-                    }
-                    PresetButton(title: "Network", icon: "network", color: .green) {
-                        applyNetworkPreset()
+                    .disabled(manager.syntaxHighlights.isEmpty)
+                    
+                    Button {
+                        importHighlights()
+                    } label: {
+                        Label("Import from File", systemImage: "square.and.arrow.down")
+                            .frame(maxWidth: .infinity)
                     }
                 }
+                .controlSize(.large)
+                
+                Text("Export keywords to share or backup. Import to merge or replace keywords.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             .padding()
         }
-        .frame(width: 600, height: 700)
+        .frame(width: 600, height: 600)
         .confirmationDialog(
             "Clear all keywords?",
             isPresented: $showingClearConfirmation,
@@ -216,18 +246,24 @@ struct SyntaxHighlightSettingsView: View {
             Text("This will remove all \(manager.syntaxHighlights.count) saved keywords. This action cannot be undone.")
         }
         .confirmationDialog(
-            "Reset to defaults?",
-            isPresented: $showingResetConfirmation,
+            "Import Keywords",
+            isPresented: $showingImportOptions,
             titleVisibility: .visible
         ) {
-            Button("Reset", role: .destructive) {
-                manager.syntaxHighlights.removeAll()
-                applySystemLogsPreset()
-                cancelEditing()
+            Button("Merge with Existing") {
+                performImport(replace: false)
+            }
+            Button("Replace All", role: .destructive) {
+                performImport(replace: true)
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("This will replace all current keywords with the default System Logs preset.")
+            Text("Choose how to import the keywords")
+        }
+        .alert("Import Error", isPresented: $showingImportError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(importErrorMessage)
         }
     }
     
@@ -270,50 +306,61 @@ struct SyntaxHighlightSettingsView: View {
         editingKeyword = nil
     }
     
-    // MARK: - Preset configurations
-    private func applySystemLogsPreset() {
-        manager.addHighlight(keyword: "error", color: .systemRed)
-        manager.addHighlight(keyword: "ERROR", color: .systemRed)
-        manager.addHighlight(keyword: "fail", color: .systemRed)
-        manager.addHighlight(keyword: "FAIL", color: .systemRed)
-        manager.addHighlight(keyword: "fatal", color: .systemRed)
-        manager.addHighlight(keyword: "warning", color: .systemOrange)
-        manager.addHighlight(keyword: "WARNING", color: .systemOrange)
-        manager.addHighlight(keyword: "warn", color: .systemOrange)
-        manager.addHighlight(keyword: "info", color: .systemBlue)
-        manager.addHighlight(keyword: "INFO", color: .systemBlue)
-        manager.addHighlight(keyword: "success", color: .systemGreen)
-        manager.addHighlight(keyword: "SUCCESS", color: .systemGreen)
-        manager.addHighlight(keyword: "debug", color: .systemGray)
+    // MARK: - Import/Export Functions
+    
+    @State private var importFileURL: URL?
+    
+    private func exportHighlights() {
+        guard let data = manager.exportHighlights() else { return }
+        
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [.json]
+        panel.nameFieldStringValue = "syntax-highlights.json"
+        panel.message = "Export syntax highlighting keywords"
+        
+        panel.begin { response in
+            if response == .OK, let url = panel.url {
+                do {
+                    try data.write(to: url)
+                } catch {
+                    importErrorMessage = "Failed to export: \(error.localizedDescription)"
+                    showingImportError = true
+                }
+            }
+        }
     }
     
-    private func applyGitPreset() {
-        manager.addHighlight(keyword: "modified", color: .systemYellow)
-        manager.addHighlight(keyword: "deleted", color: .systemRed)
-        manager.addHighlight(keyword: "created", color: .systemGreen)
-        manager.addHighlight(keyword: "renamed", color: .systemBlue)
-        manager.addHighlight(keyword: "conflict", color: .systemOrange)
-        manager.addHighlight(keyword: "branch", color: .systemPurple)
-        manager.addHighlight(keyword: "commit", color: .systemGreen)
-        manager.addHighlight(keyword: "merge", color: .systemTeal)
+    private func importHighlights() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [.json]
+        panel.allowsMultipleSelection = false
+        panel.message = "Select a syntax highlights file to import"
+        
+        panel.begin { response in
+            if response == .OK, let url = panel.url {
+                importFileURL = url
+                // Ask user if they want to merge or replace
+                if !manager.syntaxHighlights.isEmpty {
+                    showingImportOptions = true
+                } else {
+                    // If empty, just import
+                    performImport(replace: false)
+                }
+            }
+        }
     }
     
-    private func applyDockerPreset() {
-        manager.addHighlight(keyword: "Up", color: .systemGreen)
-        manager.addHighlight(keyword: "Exited", color: .systemRed)
-        manager.addHighlight(keyword: "running", color: .systemGreen)
-        manager.addHighlight(keyword: "stopped", color: .systemRed)
-        manager.addHighlight(keyword: "pulling", color: .systemBlue)
-        manager.addHighlight(keyword: "building", color: .systemYellow)
-    }
-    
-    private func applyNetworkPreset() {
-        manager.addHighlight(keyword: "connected", color: .systemGreen)
-        manager.addHighlight(keyword: "disconnected", color: .systemRed)
-        manager.addHighlight(keyword: "timeout", color: .systemOrange)
-        manager.addHighlight(keyword: "refused", color: .systemRed)
-        manager.addHighlight(keyword: "listening", color: .systemGreen)
-        manager.addHighlight(keyword: "established", color: .systemBlue)
+    private func performImport(replace: Bool) {
+        guard let url = importFileURL else { return }
+        
+        do {
+            let data = try Data(contentsOf: url)
+            try manager.importHighlights(from: data, replace: replace)
+            importFileURL = nil
+        } catch {
+            importErrorMessage = error.localizedDescription
+            showingImportError = true
+        }
     }
 }
 
@@ -381,35 +428,6 @@ struct KeywordRowView: View {
         .onHover { hovering in
             isHovering = hovering
         }
-    }
-}
-
-struct PresetButton: View {
-    let title: String
-    let icon: String
-    let color: Color
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            HStack {
-                Image(systemName: icon)
-                    .foregroundStyle(color)
-                Text(title)
-                    .font(.subheadline)
-                Spacer()
-                Image(systemName: "plus.circle")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(Color(NSColor.controlBackgroundColor))
-            )
-        }
-        .buttonStyle(.plain)
     }
 }
 

@@ -1,0 +1,13 @@
+{
+  "ERROR": "#FF453A",
+  "FAIL": "#FF453A",
+  "FATAL": "#FF453A",
+  "SUCCESS": "#32D74B",
+  "WARNING": "#FF9F0A",
+  "error": "#FF453A",
+  "fail": "#FF453A",
+  "fatal": "#FF453A",
+  "info": "#0A84FF",
+  "success": "#32D74B",
+  "warning": "#FF9F0A"
+}

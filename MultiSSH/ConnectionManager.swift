@@ -65,8 +65,7 @@ final class ConnectionManager {
     
     private func loadSyntaxHighlights() {
         guard let saved = UserDefaults.standard.dictionary(forKey: "SyntaxHighlights") as? [String: String] else {
-            // Load default highlights if none saved
-            loadDefaultHighlights()
+            // Start with empty highlights - no defaults
             return
         }
         
@@ -76,17 +75,42 @@ final class ConnectionManager {
         }
     }
     
-    private func loadDefaultHighlights() {
-        // Default highlights
-        syntaxHighlights = [
-            "error": .systemRed,
-            "ERROR": .systemRed,
-            "fail": .systemRed,
-            "warning": .systemOrange,
-            "WARNING": .systemOrange,
-            "success": .systemGreen,
-            "info": .systemBlue,
-        ]
+    // MARK: - Import/Export
+    
+    /// Export syntax highlights to JSON format
+    func exportHighlights() -> Data? {
+        var exportData: [String: String] = [:]
+        for (keyword, color) in syntaxHighlights {
+            exportData[keyword] = color.hexString
+        }
+        
+        return try? JSONSerialization.data(withJSONObject: exportData, options: [.prettyPrinted, .sortedKeys])
+    }
+    
+    /// Import syntax highlights from JSON data
+    func importHighlights(from data: Data, replace: Bool = false) throws {
+        guard let json = try JSONSerialization.jsonObject(with: data) as? [String: String] else {
+            throw ImportError.invalidFormat
+        }
+        
+        if replace {
+            syntaxHighlights.removeAll()
+        }
+        
+        for (keyword, hexString) in json {
+            syntaxHighlights[keyword] = NSColor(hex: hexString)
+        }
+    }
+    
+    enum ImportError: LocalizedError {
+        case invalidFormat
+        
+        var errorDescription: String? {
+            switch self {
+            case .invalidFormat:
+                return "Invalid file format. Expected JSON with keyword-color pairs."
+            }
+        }
     }
 }
 
