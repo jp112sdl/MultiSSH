@@ -34,6 +34,7 @@ struct ContentView: View {
     @State private var isDropTargetingUnfoldered = false
     @State private var detailViewSize: CGSize = .zero
     @State private var showCredentialManager = false
+    @Environment(LanguageSettings.self) private var lang
 
     private var columns: [GridItem] {
         let count = manager.sessions.count
@@ -127,7 +128,7 @@ struct ContentView: View {
     // Clone a connection
     private func cloneConnection(_ connection: SSHConnection) {
         let clonedConnection = SSHConnection(
-            name: "\(connection.name) Copy",
+            name: "\(connection.name) \(lang.s("Copy", "Kopie"))",
             host: connection.host,
             port: connection.port,
             username: connection.username,
@@ -171,7 +172,7 @@ struct ContentView: View {
                 } else if !folders.isEmpty {
                     // Show a drop zone when there are no unfoldered connections
                     Section {
-                        Text("Drop here to remove from folder")
+                        Text(lang.s("Drop here to remove from folder", "Hierher ziehen, um aus Ordner zu entfernen"))
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity)
@@ -236,7 +237,7 @@ struct ContentView: View {
                                             .foregroundStyle(.red)
                                     }
                                     .buttonStyle(.plain)
-                                    .help("Disconnect all sessions in this folder")
+                                    .help(lang.s("Disconnect all sessions in this folder", "Alle Sitzungen dieses Ordners trennen"))
                                 }
                                 
                                 if !allConnected(in: folder) {
@@ -248,7 +249,7 @@ struct ContentView: View {
                                             .foregroundStyle(.green)
                                     }
                                     .buttonStyle(.plain)
-                                    .help("Connect all servers in this folder")
+                                    .help(lang.s("Connect all servers in this folder", "Alle Server dieses Ordners verbinden"))
                                 }
                             }
                             
@@ -265,7 +266,7 @@ struct ContentView: View {
                         .background(dropTargetFolder?.id == folder.id ? Color.accentColor.opacity(0.15) : Color.clear)
                         .cornerRadius(4)
                         .contextMenu {
-                            Button(isFolderCollapsed(folder) ? "Expand" : "Collapse") {
+                            Button(isFolderCollapsed(folder) ? lang.s("Expand", "Ausklappen") : lang.s("Collapse", "Einklappen")) {
                                 toggleFolderCollapse(folder)
                             }
                             Divider()
@@ -274,23 +275,23 @@ struct ContentView: View {
                                 Button {
                                     connectAll(in: folder)
                                 } label: {
-                                    Label("Connect All", systemImage: "play.circle.fill")
+                                    Label(lang.s("Connect All", "Alle verbinden"), systemImage: "play.circle.fill")
                                 }
                                 .disabled(allConnected(in: folder))
                                 
                                 Button {
                                     disconnectAll(in: folder)
                                 } label: {
-                                    Label("Disconnect All", systemImage: "stop.circle.fill")
+                                    Label(lang.s("Disconnect All", "Alle trennen"), systemImage: "stop.circle.fill")
                                 }
                                 .disabled(!hasConnectedSessions(in: folder))
                                 
                                 Divider()
                             }
                             
-                            Button("Edit Folder") { editingFolder = folder }
+                            Button(lang.s("Edit Folder", "Ordner bearbeiten")) { editingFolder = folder }
                             Divider()
-                            Button("Delete Folder", role: .destructive) {
+                            Button(lang.s("Delete Folder", "Ordner löschen"), role: .destructive) {
                                 // Remove folder reference from connections
                                 for connection in folder.connections {
                                     connection.folder = nil
@@ -311,45 +312,57 @@ struct ContentView: View {
                 }
             }
             .navigationSplitViewColumnWidth(min: 210, ideal: 280)
-            .navigationTitle("Connections")
+            .navigationTitle(lang.s("Connections", "Verbindungen"))
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
+                    Button {
+                        lang.toggle()
+                    } label: {
+                        HStack(spacing: 2) {
+                            Image(systemName: "globe")
+                                .font(.caption)
+                            Text(lang.current.code)
+                                .font(.caption.bold())
+                        }
+                    }
+                    .help(lang.s("Switch to German", "Auf Englisch umschalten"))
+
                     Button {
                         showCredentialManager = true
                     } label: {
                         Image(systemName: "key.fill")
                     }
-                    .help("Credential manager")
+                    .help(lang.s("Credential manager", "Anmeldedaten-Manager"))
                     
                     Button {
                         showSyntaxSettings = true
                     } label: {
                         Image(systemName: "paintbrush")
                     }
-                    .help("Syntax highlighting settings")
+                    .help(lang.s("Syntax highlighting settings", "Syntax-Hervorhebungseinstellungen"))
                     
                     Menu {
                         Button {
                             showAddConnection = true
                         } label: {
-                            Label("New Connection", systemImage: "server.rack")
+                            Label(lang.s("New Connection", "Neue Verbindung"), systemImage: "server.rack")
                         }
                         Button {
                             showAddFolder = true
                         } label: {
-                            Label("New Folder", systemImage: "folder.badge.plus")
+                            Label(lang.s("New Folder", "Neuer Ordner"), systemImage: "folder.badge.plus")
                         }
                         Divider()
                         Button {
                             showCredentialManager = true
                         } label: {
-                            Label("Manage Credentials", systemImage: "key.fill")
+                            Label(lang.s("Manage Credentials", "Anmeldedaten verwalten"), systemImage: "key.fill")
                         }
                         Divider()
                         Button {
                             showSyntaxSettings = true
                         } label: {
-                            Label("Syntax Highlighting", systemImage: "paintbrush")
+                            Label(lang.s("Syntax Highlighting", "Syntax-Hervorhebung"), systemImage: "paintbrush")
                         }
                     } label: {
                         Image(systemName: "plus")
@@ -361,17 +374,17 @@ struct ContentView: View {
                 VStack(spacing: 0) {
                     if manager.sessions.isEmpty {
                         ContentUnavailableView(
-                            "No Active Connections",
+                            lang.s("No Active Connections", "Keine aktiven Verbindungen"),
                             systemImage: "terminal",
-                            description: Text("Connect to a server from the sidebar to get started")
+                            description: Text(lang.s("Connect to a server from the sidebar to get started", "Verbinden Sie sich über die Seitenleiste mit einem Server"))
                         )
                     } else {
                         // Toolbar for sync resize control
                         HStack {
-                            Toggle("Auto-scale", isOn: $syncResize)
+                            Toggle(lang.s("Auto-scale", "Auto-Skalierung"), isOn: $syncResize)
                                 .toggleStyle(.checkbox)
                                 .font(.caption)
-                                .help("Automatically scale terminals to fill available space")
+                                .help(lang.s("Automatically scale terminals to fill available space", "Terminals automatisch auf den verfügbaren Platz skalieren"))
                             
                             if !syncResize {
                                 Text("W:")
@@ -414,7 +427,7 @@ struct ContentView: View {
                                     .font(.caption)
                             }
                             .buttonStyle(.plain)
-                            .help("Reset font size to 11pt")
+                            .help(lang.s("Reset font size to 11pt", "Schriftgröße auf 11 Pt. zurücksetzen"))
                             
                             Divider()
                                 .frame(height: 16)
@@ -426,7 +439,7 @@ struct ContentView: View {
                                     .font(.caption)
                             }
                             .buttonStyle(.plain)
-                            .help("Syntax highlighting settings")
+                            .help(lang.s("Syntax highlighting settings", "Syntax-Hervorhebungseinstellungen"))
                             
                             Spacer()
                         }
@@ -503,6 +516,7 @@ struct ConnectionRowView: View {
     let onEdit: () -> Void
     let onClone: () -> Void
     let onDelete: () -> Void
+    @Environment(LanguageSettings.self) private var lang
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -514,12 +528,12 @@ struct ConnectionRowView: View {
                     .fontWeight(.medium)
                 Spacer()
                 if isConnected {
-                    Button("Disconnect", action: onDisconnect)
+                    Button(lang.s("Disconnect", "Trennen"), action: onDisconnect)
                         .buttonStyle(.plain)
                         .font(.caption)
                         .foregroundStyle(.red)
                 } else {
-                    Button("Connect", action: onConnect)
+                    Button(lang.s("Connect", "Verbinden"), action: onConnect)
                         .buttonStyle(.plain)
                         .font(.caption)
                         .foregroundStyle(Color.accentColor)
@@ -545,14 +559,14 @@ struct ConnectionRowView: View {
             Button {
                 onConnect()
             } label: {
-                Label("Connect", systemImage: "play.circle")
+                Label(lang.s("Connect", "Verbinden"), systemImage: "play.circle")
             }
             .disabled(isConnected)
             
             Button {
                 onDisconnect()
             } label: {
-                Label("Disconnect", systemImage: "stop.circle")
+                Label(lang.s("Disconnect", "Trennen"), systemImage: "stop.circle")
             }
             .disabled(!isConnected)
             
@@ -561,13 +575,13 @@ struct ConnectionRowView: View {
             Button {
                 onEdit()
             } label: {
-                Label("Edit", systemImage: "pencil")
+                Label(lang.s("Edit", "Bearbeiten"), systemImage: "pencil")
             }
             
             Button {
                 onClone()
             } label: {
-                Label("Duplicate", systemImage: "doc.on.doc")
+                Label(lang.s("Duplicate", "Duplizieren"), systemImage: "doc.on.doc")
             }
             
             Divider()
@@ -575,7 +589,7 @@ struct ConnectionRowView: View {
             Button(role: .destructive) {
                 onDelete()
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label(lang.s("Delete", "Löschen"), systemImage: "trash")
             }
         }
         .draggable(TransferableConnectionID(id: connection.id.hashValue.description)) {
@@ -597,6 +611,7 @@ struct TerminalPaneView: View {
     var fontSize: CGFloat = 11
     var syntaxHighlights: [String: NSColor] = [:]
     let onDisconnect: () -> Void
+    @Environment(LanguageSettings.self) private var lang
     
     @State private var isDraggingHeight = false
     @State private var isDraggingWidth = false
@@ -614,10 +629,10 @@ struct TerminalPaneView: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Toggle("Sync", isOn: $session.isActive)
+                    Toggle(lang.s("Sync", "Sync"), isOn: $session.isActive)
                         .toggleStyle(.checkbox)
                         .font(.caption)
-                        .help("Include this session in broadcast input")
+                        .help(lang.s("Include this session in broadcast input", "Diese Sitzung in die Broadcast-Eingabe einbeziehen"))
                     Button {
                         onDisconnect()
                     } label: {
@@ -718,6 +733,7 @@ struct BroadcastInputView: View {
     @State private var temporaryCommand = ""
     @State private var showHistory = false
     @FocusState private var focused: Bool
+    @Environment(LanguageSettings.self) private var lang
 
     private var activeCount: Int {
         manager.sessions.filter { $0.isActive && $0.isConnected }.count
@@ -729,14 +745,14 @@ struct BroadcastInputView: View {
             if showHistory && !commandHistory.isEmpty {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack {
-                        Text("Command History")
+                        Text(lang.s("Command History", "Befehlsverlauf"))
                             .font(.caption.bold())
                         Spacer()
                         Button {
                             commandHistory.removeAll()
                             showHistory = false
                         } label: {
-                            Text("Clear")
+                            Text(lang.s("Clear", "Löschen"))
                                 .font(.caption)
                         }
                         .buttonStyle(.plain)
@@ -798,7 +814,7 @@ struct BroadcastInputView: View {
                     .foregroundStyle(activeCount > 0 ? (instantMode ? .orange : .green) : .secondary)
                     .frame(width: 16)
 
-                TextField("Broadcast to \(activeCount) session(s)...", text: $command)
+                TextField(lang.s("Broadcast to \(activeCount) session(s)...", "Senden an \(activeCount) Sitzung(en)..."), text: $command)
                     .textFieldStyle(.plain)
                     .font(.system(.body, design: .monospaced))
                     .focused($focused)
@@ -847,7 +863,7 @@ struct BroadcastInputView: View {
                     }
 
                 if !instantMode {
-                    Button("Send") { sendCommand() }
+                    Button(lang.s("Send", "Senden")) { sendCommand() }
                         .disabled(command.isEmpty || activeCount == 0)
                         .keyboardShortcut(.return, modifiers: [])
                 }
@@ -859,7 +875,7 @@ struct BroadcastInputView: View {
                 } label: {
                     Image(systemName: "clock.arrow.circlepath")
                 }
-                .help("Command history (\(commandHistory.count)/50)")
+                .help(lang.s("Command history (\(commandHistory.count)/50)", "Befehlsverlauf (\(commandHistory.count)/50)"))
                 .disabled(commandHistory.isEmpty)
 
                 Divider().frame(height: 16)
@@ -869,21 +885,21 @@ struct BroadcastInputView: View {
                     if instantMode { command = "" }
                 }
                 .foregroundStyle(.red)
-                .help("Send Ctrl+C (interrupt) to active sessions")
+                .help(lang.s("Send Ctrl+C (interrupt) to active sessions", "Strg+C (Abbruch) an aktive Sitzungen senden"))
 
                 Button("^D") {
                     manager.broadcast("\u{04}")
                     if instantMode { command = "" }
                 }
                 .foregroundStyle(.orange)
-                .help("Send Ctrl+D (EOF) to active sessions")
+                .help(lang.s("Send Ctrl+D (EOF) to active sessions", "Strg+D (EOF) an aktive Sitzungen senden"))
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
 
             // Instant mode toggle
             HStack {
-                Toggle("Instant transmission (keystrokes sent immediately)", isOn: $instantMode)
+                Toggle(lang.s("Instant transmission (keystrokes sent immediately)", "Sofortübertragung (Tastendrücke werden sofort gesendet)"), isOn: $instantMode)
                     .toggleStyle(.checkbox)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -993,6 +1009,7 @@ struct AddConnectionView: View {
     let onSave: (SSHConnection) -> Void
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Credential.sortOrder) private var credentials: [Credential]
+    @Environment(LanguageSettings.self) private var lang
 
     @State private var name = ""
     @State private var host = ""
@@ -1007,18 +1024,18 @@ struct AddConnectionView: View {
 
     var body: some View {
         Form {
-            Section("Connection") {
-                TextField("Display Name", text: $name)
-                TextField("Hostname or IP", text: $host)
+            Section(lang.s("Connection", "Verbindung")) {
+                TextField(lang.s("Display Name", "Anzeigename"), text: $name)
+                TextField(lang.s("Hostname or IP", "Hostname oder IP"), text: $host)
                     .onChange(of: host) {
                         if name.isEmpty { name = host }
                     }
-                TextField("Port", text: $port)
+                TextField(lang.s("Port", "Port"), text: $port)
             }
             
-            Section("Organization") {
-                Picker("Folder", selection: $selectedFolder) {
-                    Text("None").tag(nil as ConnectionFolder?)
+            Section(lang.s("Organization", "Organisation")) {
+                Picker(lang.s("Folder", "Ordner"), selection: $selectedFolder) {
+                    Text(lang.s("None", "Kein")).tag(nil as ConnectionFolder?)
                     ForEach(folders) { folder in
                         HStack {
                             Circle()
@@ -1031,8 +1048,8 @@ struct AddConnectionView: View {
                 }
             }
 
-            Section("Authentication") {
-                Toggle("Use Saved Credential", isOn: $useCredential)
+            Section(lang.s("Authentication", "Authentifizierung")) {
+                Toggle(lang.s("Use Saved Credential", "Gespeicherte Anmeldedaten verwenden"), isOn: $useCredential)
                     .onChange(of: useCredential) { oldValue, newValue in
                         if newValue && selectedCredential == nil && !credentials.isEmpty {
                             selectedCredential = credentials.first
@@ -1042,49 +1059,49 @@ struct AddConnectionView: View {
                 if useCredential {
                     if credentials.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("No saved credentials")
+                            Text(lang.s("No saved credentials", "Keine gespeicherten Anmeldedaten"))
                                 .foregroundStyle(.secondary)
-                            Text("Create credentials in the Credential Manager")
+                            Text(lang.s("Create credentials in the Credential Manager", "Anmeldedaten im Anmeldedaten-Manager erstellen"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        Picker("Credential", selection: $selectedCredential) {
-                            Text("Select...").tag(nil as Credential?)
+                        Picker(lang.s("Credential", "Anmeldedaten"), selection: $selectedCredential) {
+                            Text(lang.s("Select...", "Auswählen...")).tag(nil as Credential?)
                             ForEach(credentials) { credential in
                                 Text(credential.displayText).tag(credential as Credential?)
                             }
                         }
                     }
                 } else {
-                    TextField("Username", text: $username)
+                    TextField(lang.s("Username", "Benutzername"), text: $username)
                     
-                    Picker("Method", selection: $useKeyAuth) {
-                        Text("SSH Key / Agent").tag(true)
-                        Text("Password").tag(false)
+                    Picker(lang.s("Method", "Methode"), selection: $useKeyAuth) {
+                        Text(lang.s("SSH Key / Agent", "SSH-Schlüssel / Agent")).tag(true)
+                        Text(lang.s("Password", "Passwort")).tag(false)
                     }
                     .pickerStyle(.segmented)
 
                     if useKeyAuth {
                         HStack {
-                            TextField("Identity file (leave blank for default/agent)", text: $identityFile)
-                            Button("Browse…") { browseForKey() }
+                            TextField(lang.s("Identity file (leave blank for default/agent)", "Identitätsdatei (leer lassen für Standard/Agent)"), text: $identityFile)
+                            Button(lang.s("Browse…", "Durchsuchen…")) { browseForKey() }
                         }
                     } else {
-                        SecureField("Password", text: $password)
+                        SecureField(lang.s("Password", "Passwort"), text: $password)
                     }
                 }
             }
         }
         .formStyle(.grouped)
         .frame(width: 480, height: useCredential ? 420 : 520)
-        .navigationTitle("Add Connection")
+        .navigationTitle(lang.s("Add Connection", "Verbindung hinzufügen"))
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+                Button(lang.s("Cancel", "Abbrechen")) { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Add") { save() }
+                Button(lang.s("Add", "Hinzufügen")) { save() }
                     .disabled(host.isEmpty || (useCredential ? selectedCredential == nil : username.isEmpty))
             }
         }
@@ -1123,20 +1140,21 @@ struct EditConnectionView: View {
     let folders: [ConnectionFolder]
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Credential.sortOrder) private var credentials: [Credential]
+    @Environment(LanguageSettings.self) private var lang
     
     @State private var useCredential: Bool = false
 
     var body: some View {
         Form {
-            Section("Connection") {
-                TextField("Display name", text: $connection.name)
-                TextField("Hostname or IP", text: $connection.host)
-                TextField("Port", value: $connection.port, format: .number)
+            Section(lang.s("Connection", "Verbindung")) {
+                TextField(lang.s("Display name", "Anzeigename"), text: $connection.name)
+                TextField(lang.s("Hostname or IP", "Hostname oder IP"), text: $connection.host)
+                TextField(lang.s("Port", "Port"), value: $connection.port, format: .number)
             }
             
-            Section("Organization") {
-                Picker("Folder", selection: $connection.folder) {
-                    Text("None").tag(nil as ConnectionFolder?)
+            Section(lang.s("Organization", "Organisation")) {
+                Picker(lang.s("Folder", "Ordner"), selection: $connection.folder) {
+                    Text(lang.s("None", "Kein")).tag(nil as ConnectionFolder?)
                     ForEach(folders) { folder in
                         HStack {
                             Circle()
@@ -1149,8 +1167,8 @@ struct EditConnectionView: View {
                 }
             }
 
-            Section("Authentication") {
-                Toggle("Use Saved Credential", isOn: $useCredential)
+            Section(lang.s("Authentication", "Authentifizierung")) {
+                Toggle(lang.s("Use Saved Credential", "Gespeicherte Anmeldedaten verwenden"), isOn: $useCredential)
                     .onChange(of: useCredential) { oldValue, newValue in
                         if newValue {
                             if connection.credential == nil && !credentials.isEmpty {
@@ -1164,46 +1182,46 @@ struct EditConnectionView: View {
                 if useCredential {
                     if credentials.isEmpty {
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("No saved credentials")
+                            Text(lang.s("No saved credentials", "Keine gespeicherten Anmeldedaten"))
                                 .foregroundStyle(.secondary)
-                            Text("Create credentials in the Credential Manager")
+                            Text(lang.s("Create credentials in the Credential Manager", "Anmeldedaten im Anmeldedaten-Manager erstellen"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     } else {
-                        Picker("Credential", selection: $connection.credential) {
-                            Text("Select...").tag(nil as Credential?)
+                        Picker(lang.s("Credential", "Anmeldedaten"), selection: $connection.credential) {
+                            Text(lang.s("Select...", "Auswählen...")).tag(nil as Credential?)
                             ForEach(credentials) { credential in
                                 Text(credential.displayText).tag(credential as Credential?)
                             }
                         }
                     }
                 } else {
-                    TextField("Username", text: $connection.username)
+                    TextField(lang.s("Username", "Benutzername"), text: $connection.username)
                     
-                    Picker("Method", selection: $connection.useKeyAuth) {
-                        Text("SSH Key / Agent").tag(true)
-                        Text("Password").tag(false)
+                    Picker(lang.s("Method", "Methode"), selection: $connection.useKeyAuth) {
+                        Text(lang.s("SSH Key / Agent", "SSH-Schlüssel / Agent")).tag(true)
+                        Text(lang.s("Password", "Passwort")).tag(false)
                     }
                     .pickerStyle(.segmented)
 
                     if connection.useKeyAuth {
                         HStack {
-                            TextField("Identity file (leave blank for default/agent)", text: $connection.identityFile)
-                            Button("Browse…") { browseForKey() }
+                            TextField(lang.s("Identity file (leave blank for default/agent)", "Identitätsdatei (leer lassen für Standard/Agent)"), text: $connection.identityFile)
+                            Button(lang.s("Browse…", "Durchsuchen…")) { browseForKey() }
                         }
                     } else {
-                        SecureField("Password", text: $connection.password)
+                        SecureField(lang.s("Password", "Passwort"), text: $connection.password)
                     }
                 }
             }
         }
         .formStyle(.grouped)
         .frame(width: 480, height: useCredential ? 420 : 525)
-        .navigationTitle("Edit: \(connection.name)")
+        .navigationTitle(lang.s("Edit", "Bearbeiten") + ": \(connection.name)")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }
+                Button(lang.s("Done", "Fertig")) { dismiss() }
             }
         }
         .onAppear {
@@ -1227,28 +1245,31 @@ struct EditConnectionView: View {
 struct AddFolderView: View {
     let onSave: (ConnectionFolder) -> Void
     @Environment(\.dismiss) private var dismiss
+    @Environment(LanguageSettings.self) private var lang
     
     @State private var name = ""
     @State private var colorHex = "#3B82F6"
     
-    private let availableColors: [(String, String)] = [
-        ("Blue", "#3B82F6"),
-        ("Green", "#10B981"),
-        ("Red", "#EF4444"),
-        ("Yellow", "#F59E0B"),
-        ("Purple", "#8B5CF6"),
-        ("Pink", "#EC4899"),
-        ("Orange", "#F97316"),
-        ("Cyan", "#06B6D4"),
-    ]
+    private var availableColors: [(String, String)] {
+        [
+            (lang.s("Blue", "Blau"), "#3B82F6"),
+            (lang.s("Green", "Grün"), "#10B981"),
+            (lang.s("Red", "Rot"), "#EF4444"),
+            (lang.s("Yellow", "Gelb"), "#F59E0B"),
+            (lang.s("Purple", "Lila"), "#8B5CF6"),
+            (lang.s("Pink", "Rosa"), "#EC4899"),
+            (lang.s("Orange", "Orange"), "#F97316"),
+            (lang.s("Cyan", "Türkis"), "#06B6D4"),
+        ]
+    }
     
     var body: some View {
         Form {
-            Section("Folder Details") {
-                TextField("Name", text: $name)
+            Section(lang.s("Folder Details", "Ordnerdetails")) {
+                TextField(lang.s("Name", "Name"), text: $name)
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Color")
+                    Text(lang.s("Color", "Farbe"))
                         .font(.headline)
                     
                     HStack(spacing: 12) {
@@ -1278,14 +1299,14 @@ struct AddFolderView: View {
         }
         .formStyle(.grouped)
         .frame(width: 420, height: 220)
-        .navigationTitle("New Folder")
+        .navigationTitle(lang.s("New Folder", "Neuer Ordner"))
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
+                Button(lang.s("Cancel", "Abbrechen")) { dismiss() }
             }
             ToolbarItem(placement: .confirmationAction) {
-                Button("Create") {
-                    let folder = ConnectionFolder(name: name.isEmpty ? "New Folder" : name, colorHex: colorHex)
+                Button(lang.s("Create", "Erstellen")) {
+                    let folder = ConnectionFolder(name: name.isEmpty ? lang.s("New Folder", "Neuer Ordner") : name, colorHex: colorHex)
                     onSave(folder)
                     dismiss()
                 }
@@ -1299,25 +1320,28 @@ struct AddFolderView: View {
 struct EditFolderView: View {
     @Bindable var folder: ConnectionFolder
     @Environment(\.dismiss) private var dismiss
+    @Environment(LanguageSettings.self) private var lang
     
-    private let availableColors: [(String, String)] = [
-        ("Blue", "#3B82F6"),
-        ("Green", "#10B981"),
-        ("Red", "#EF4444"),
-        ("Yellow", "#F59E0B"),
-        ("Purple", "#8B5CF6"),
-        ("Pink", "#EC4899"),
-        ("Orange", "#F97316"),
-        ("Cyan", "#06B6D4"),
-    ]
+    private var availableColors: [(String, String)] {
+        [
+            (lang.s("Blue", "Blau"), "#3B82F6"),
+            (lang.s("Green", "Grün"), "#10B981"),
+            (lang.s("Red", "Rot"), "#EF4444"),
+            (lang.s("Yellow", "Gelb"), "#F59E0B"),
+            (lang.s("Purple", "Lila"), "#8B5CF6"),
+            (lang.s("Pink", "Rosa"), "#EC4899"),
+            (lang.s("Orange", "Orange"), "#F97316"),
+            (lang.s("Cyan", "Türkis"), "#06B6D4"),
+        ]
+    }
     
     var body: some View {
         Form {
-            Section("Folder Details") {
-                TextField("Name", text: $folder.name)
+            Section(lang.s("Folder Details", "Ordnerdetails")) {
+                TextField(lang.s("Name", "Name"), text: $folder.name)
                 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Color")
+                    Text(lang.s("Color", "Farbe"))
                         .font(.headline)
                     
                     HStack(spacing: 12) {
@@ -1345,17 +1369,17 @@ struct EditFolderView: View {
                 .padding(.vertical, 4)
             }
             
-            Section("Connections") {
-                Text("\(folder.connections.count) connection(s)")
+            Section(lang.s("Connections", "Verbindungen")) {
+                Text("\(folder.connections.count) \(lang.s("connection(s)", "Verbindung(en)"))")
                     .foregroundStyle(.secondary)
             }
         }
         .formStyle(.grouped)
         .frame(width: 420, height: 280)
-        .navigationTitle("Edit Folder")
+        .navigationTitle(lang.s("Edit Folder", "Ordner bearbeiten"))
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button("Done") { dismiss() }
+                Button(lang.s("Done", "Fertig")) { dismiss() }
             }
         }
     }

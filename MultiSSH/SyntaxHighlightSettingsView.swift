@@ -5,7 +5,8 @@ import UniformTypeIdentifiers
 struct SyntaxHighlightSettingsView: View {
     @Bindable var manager: ConnectionManager
     @Environment(\.dismiss) private var dismiss
-    
+    @Environment(LanguageSettings.self) private var lang
+
     @State private var newKeyword = ""
     @State private var newColor: Color = .red
     @State private var editingKeyword: String?
@@ -14,7 +15,7 @@ struct SyntaxHighlightSettingsView: View {
     @State private var showingImportError = false
     @State private var importErrorMessage = ""
     @State private var showingImportOptions = false
-    
+
     var filteredKeywords: [String] {
         let keywords = Array(manager.syntaxHighlights.keys.sorted())
         if searchText.isEmpty {
@@ -22,59 +23,59 @@ struct SyntaxHighlightSettingsView: View {
         }
         return keywords.filter { $0.localizedCaseInsensitiveContains(searchText) }
     }
-    
+
     var body: some View {
         VStack(spacing: 0) {
             // Header
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Syntax Highlighting")
+                    Text(lang.s("Syntax Highlighting", "Syntax-Hervorhebung"))
                         .font(.headline)
-                    Text("Configure keyword colors for SSH terminal output")
+                    Text(lang.s("Configure keyword colors for SSH terminal output", "Schlüsselwortfarben für SSH-Terminalausgabe konfigurieren"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Done") {
+                Button(lang.s("Done", "Fertig")) {
                     dismiss()
                 }
                 .keyboardShortcut(.defaultAction)
             }
             .padding()
-            
+
             Divider()
-            
+
             // Add/Edit keyword section
             VStack(alignment: .leading, spacing: 8) {
-                Text(editingKeyword != nil ? "Edit Keyword" : "Add New Keyword")
+                Text(editingKeyword != nil ? lang.s("Edit Keyword", "Schlüsselwort bearbeiten") : lang.s("Add New Keyword", "Neues Schlüsselwort hinzufügen"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 HStack {
-                    TextField("Keyword (e.g., error, success, warning)", text: $newKeyword)
+                    TextField(lang.s("Keyword (e.g., error, success, warning)", "Schlüsselwort (z.B. Fehler, Erfolg, Warnung)"), text: $newKeyword)
                         .textFieldStyle(.roundedBorder)
                         .onSubmit {
                             if !newKeyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                                 addKeyword()
                             }
                         }
-                    
+
                     ColorPicker("Color", selection: $newColor)
                         .labelsHidden()
                         .frame(width: 50)
-                    
+
                     if editingKeyword != nil {
-                        Button("Update") {
+                        Button(lang.s("Update", "Aktualisieren")) {
                             updateKeyword()
                         }
                         .disabled(newKeyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        
-                        Button("Cancel") {
+
+                        Button(lang.s("Cancel", "Abbrechen")) {
                             cancelEditing()
                         }
                         .buttonStyle(.plain)
                     } else {
-                        Button("Add") {
+                        Button(lang.s("Add", "Hinzufügen")) {
                             addKeyword()
                         }
                         .disabled(newKeyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -84,14 +85,14 @@ struct SyntaxHighlightSettingsView: View {
             }
             .padding()
             .background(editingKeyword != nil ? Color.accentColor.opacity(0.05) : Color.clear)
-            
+
             Divider()
-            
+
             // Search and filter
             HStack {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
-                TextField("Search keywords...", text: $searchText)
+                TextField(lang.s("Search keywords...", "Schlüsselwörter suchen..."), text: $searchText)
                     .textFieldStyle(.plain)
                 if !searchText.isEmpty {
                     Button {
@@ -106,41 +107,41 @@ struct SyntaxHighlightSettingsView: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Color(NSColor.controlBackgroundColor))
-            
+
             Divider()
-            
+
             // List of current highlights
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text("Saved Keywords (\(manager.syntaxHighlights.count))")
+                    Text(lang.s("Saved Keywords (\(manager.syntaxHighlights.count))", "Gespeicherte Schlüsselwörter (\(manager.syntaxHighlights.count))"))
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    
+
                     if !searchText.isEmpty {
-                        Text("• \(filteredKeywords.count) matching")
+                        Text("• \(filteredKeywords.count) \(lang.s("matching", "gefunden"))")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
-                    
+
                     Spacer()
-                    
+
                     if !manager.syntaxHighlights.isEmpty {
                         Menu {
                             Button {
                                 exportHighlights()
                             } label: {
-                                Label("Export Keywords...", systemImage: "square.and.arrow.up")
+                                Label(lang.s("Export Keywords...", "Schlüsselwörter exportieren..."), systemImage: "square.and.arrow.up")
                             }
-                            
+
                             Button {
                                 importHighlights()
                             } label: {
-                                Label("Import Keywords...", systemImage: "square.and.arrow.down")
+                                Label(lang.s("Import Keywords...", "Schlüsselwörter importieren..."), systemImage: "square.and.arrow.down")
                             }
-                            
+
                             Divider()
-                            
-                            Button("Clear All Keywords") {
+
+                            Button(lang.s("Clear All Keywords", "Alle Schlüsselwörter löschen")) {
                                 showingClearConfirmation = true
                             }
                         } label: {
@@ -153,19 +154,19 @@ struct SyntaxHighlightSettingsView: View {
                         Button {
                             importHighlights()
                         } label: {
-                            Label("Import", systemImage: "square.and.arrow.down")
+                            Label(lang.s("Import", "Importieren"), systemImage: "square.and.arrow.down")
                                 .font(.caption)
                         }
                         .buttonStyle(.borderless)
                     }
                 }
-                
+
                 if filteredKeywords.isEmpty {
                     ContentUnavailableView {
-                        Label(searchText.isEmpty ? "No Keywords" : "No Matching Keywords", 
+                        Label(searchText.isEmpty ? lang.s("No Keywords", "Keine Schlüsselwörter") : lang.s("No Matching Keywords", "Keine übereinstimmenden Schlüsselwörter"),
                               systemImage: "paintbrush.slash")
                     } description: {
-                        Text(searchText.isEmpty ? "Add keywords to highlight them in terminal output" : "Try a different search term")
+                        Text(searchText.isEmpty ? lang.s("Add keywords to highlight them in terminal output", "Schlüsselwörter hinzufügen, um sie in der Terminalausgabe hervorzuheben") : lang.s("Try a different search term", "Versuchen Sie einen anderen Suchbegriff"))
                     }
                     .frame(maxHeight: .infinity)
                 } else {
@@ -198,34 +199,34 @@ struct SyntaxHighlightSettingsView: View {
                 }
             }
             .padding()
-            
+
             Divider()
-            
+
             // Import/Export section
             VStack(alignment: .leading, spacing: 8) {
-                Text("Import & Export")
+                Text(lang.s("Import & Export", "Import & Export"))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                
+
                 HStack(spacing: 12) {
                     Button {
                         exportHighlights()
                     } label: {
-                        Label("Export to File", systemImage: "square.and.arrow.up")
+                        Label(lang.s("Export to File", "In Datei exportieren"), systemImage: "square.and.arrow.up")
                             .frame(maxWidth: .infinity)
                     }
                     .disabled(manager.syntaxHighlights.isEmpty)
-                    
+
                     Button {
                         importHighlights()
                     } label: {
-                        Label("Import from File", systemImage: "square.and.arrow.down")
+                        Label(lang.s("Import from File", "Aus Datei importieren"), systemImage: "square.and.arrow.down")
                             .frame(maxWidth: .infinity)
                     }
                 }
                 .controlSize(.large)
-                
-                Text("Export keywords to share or backup. Import to merge or replace keywords.")
+
+                Text(lang.s("Export keywords to share or backup. Import to merge or replace keywords.", "Schlüsselwörter zum Teilen oder Sichern exportieren. Importieren zum Zusammenführen oder Ersetzen."))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -233,109 +234,109 @@ struct SyntaxHighlightSettingsView: View {
         }
         .frame(width: 600, height: 600)
         .confirmationDialog(
-            "Clear all keywords?",
+            lang.s("Clear all keywords?", "Alle Schlüsselwörter löschen?"),
             isPresented: $showingClearConfirmation,
             titleVisibility: .visible
         ) {
-            Button("Clear All", role: .destructive) {
+            Button(lang.s("Clear All", "Alle löschen"), role: .destructive) {
                 manager.syntaxHighlights.removeAll()
                 cancelEditing()
             }
-            Button("Cancel", role: .cancel) {}
+            Button(lang.s("Cancel", "Abbrechen"), role: .cancel) {}
         } message: {
-            Text("This will remove all \(manager.syntaxHighlights.count) saved keywords. This action cannot be undone.")
+            Text(lang.s("This will remove all \(manager.syntaxHighlights.count) saved keywords. This action cannot be undone.", "Dadurch werden alle \(manager.syntaxHighlights.count) gespeicherten Schlüsselwörter gelöscht. Diese Aktion kann nicht rückgängig gemacht werden."))
         }
         .confirmationDialog(
-            "Import Keywords",
+            lang.s("Import Keywords", "Schlüsselwörter importieren"),
             isPresented: $showingImportOptions,
             titleVisibility: .visible
         ) {
-            Button("Merge with Existing") {
+            Button(lang.s("Merge with Existing", "Mit vorhandenen zusammenführen")) {
                 performImport(replace: false)
             }
-            Button("Replace All", role: .destructive) {
+            Button(lang.s("Replace All", "Alle ersetzen"), role: .destructive) {
                 performImport(replace: true)
             }
-            Button("Cancel", role: .cancel) {}
+            Button(lang.s("Cancel", "Abbrechen"), role: .cancel) {}
         } message: {
-            Text("Choose how to import the keywords")
+            Text(lang.s("Choose how to import the keywords", "Wählen Sie, wie die Schlüsselwörter importiert werden sollen"))
         }
-        .alert("Import Error", isPresented: $showingImportError) {
+        .alert(lang.s("Import Error", "Importfehler"), isPresented: $showingImportError) {
             Button("OK", role: .cancel) {}
         } message: {
             Text(importErrorMessage)
         }
     }
-    
+
     // MARK: - Helper Functions
-    
+
     private func addKeyword() {
         let trimmed = newKeyword.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        
+
         manager.addHighlight(keyword: trimmed, color: NSColor(newColor))
-        
+
         // Reset form
         resetForm()
     }
-    
+
     private func updateKeyword() {
         guard let oldKeyword = editingKeyword else { return }
         let trimmed = newKeyword.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        
+
         // Remove old keyword if name changed
         if oldKeyword != trimmed {
             manager.removeHighlight(keyword: oldKeyword)
         }
-        
+
         // Add/update with new values
         manager.addHighlight(keyword: trimmed, color: NSColor(newColor))
-        
+
         // Reset form
         resetForm()
     }
-    
+
     private func cancelEditing() {
         resetForm()
     }
-    
+
     private func resetForm() {
         newKeyword = ""
         newColor = .red
         editingKeyword = nil
     }
-    
+
     // MARK: - Import/Export Functions
-    
+
     @State private var importFileURL: URL?
-    
+
     private func exportHighlights() {
         guard let data = manager.exportHighlights() else { return }
-        
+
         let panel = NSSavePanel()
         panel.allowedContentTypes = [.json]
         panel.nameFieldStringValue = "syntax-highlights.json"
-        panel.message = "Export syntax highlighting keywords"
-        
+        panel.message = lang.s("Export syntax highlighting keywords", "Syntax-Hervorhebungs-Schlüsselwörter exportieren")
+
         panel.begin { response in
             if response == .OK, let url = panel.url {
                 do {
                     try data.write(to: url)
                 } catch {
-                    importErrorMessage = "Failed to export: \(error.localizedDescription)"
+                    importErrorMessage = lang.s("Failed to export: ", "Export fehlgeschlagen: ") + error.localizedDescription
                     showingImportError = true
                 }
             }
         }
     }
-    
+
     private func importHighlights() {
         let panel = NSOpenPanel()
         panel.allowedContentTypes = [.json]
         panel.allowsMultipleSelection = false
-        panel.message = "Select a syntax highlights file to import"
-        
+        panel.message = lang.s("Select a syntax highlights file to import", "Datei mit Syntax-Hervorhebungen zum Importieren auswählen")
+
         panel.begin { response in
             if response == .OK, let url = panel.url {
                 importFileURL = url
@@ -349,10 +350,10 @@ struct SyntaxHighlightSettingsView: View {
             }
         }
     }
-    
+
     private func performImport(replace: Bool) {
         guard let url = importFileURL else { return }
-        
+
         do {
             let data = try Data(contentsOf: url)
             try manager.importHighlights(from: data, replace: replace)
@@ -372,9 +373,10 @@ struct KeywordRowView: View {
     let isEditing: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
-    
+    @Environment(LanguageSettings.self) private var lang
+
     @State private var isHovering = false
-    
+
     var body: some View {
         HStack(spacing: 12) {
             // Color indicator
@@ -385,14 +387,14 @@ struct KeywordRowView: View {
                     RoundedRectangle(cornerRadius: 4)
                         .strokeBorder(Color.primary.opacity(0.1), lineWidth: 1)
                 )
-            
+
             // Keyword text
             Text(keyword)
                 .font(.system(.body, design: .monospaced))
                 .foregroundStyle(.primary)
-            
+
             Spacer()
-            
+
             // Action buttons (shown on hover or when editing)
             if isHovering || isEditing {
                 HStack(spacing: 8) {
@@ -404,8 +406,8 @@ struct KeywordRowView: View {
                             .foregroundStyle(.secondary)
                     }
                     .buttonStyle(.plain)
-                    .help("Edit keyword")
-                    
+                    .help(lang.s("Edit keyword", "Schlüsselwort bearbeiten"))
+
                     Button {
                         onDelete()
                     } label: {
@@ -414,7 +416,7 @@ struct KeywordRowView: View {
                             .foregroundStyle(.red)
                     }
                     .buttonStyle(.plain)
-                    .help("Delete keyword")
+                    .help(lang.s("Delete keyword", "Schlüsselwort löschen"))
                 }
             }
         }
@@ -422,7 +424,7 @@ struct KeywordRowView: View {
         .padding(.vertical, 10)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .fill(isEditing ? Color.accentColor.opacity(0.15) : 
+                .fill(isEditing ? Color.accentColor.opacity(0.15) :
                       (isHovering ? Color(NSColor.controlBackgroundColor) : Color.clear))
         )
         .onHover { hovering in

@@ -8,18 +8,19 @@ struct CredentialManagerView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Credential.sortOrder) private var credentials: [Credential]
-    
+    @Environment(LanguageSettings.self) private var lang
+
     @State private var showAddCredential = false
     @State private var editingCredential: Credential?
-    
+
     var body: some View {
         NavigationStack {
             List {
                 if credentials.isEmpty {
                     ContentUnavailableView(
-                        "No Saved Credentials",
+                        lang.s("No Saved Credentials", "Keine gespeicherten Anmeldedaten"),
                         systemImage: "key.fill",
-                        description: Text("Create reusable credentials to use across multiple connections")
+                        description: Text(lang.s("Create reusable credentials to use across multiple connections", "Wiederverwendbare Anmeldedaten für mehrere Verbindungen erstellen"))
                     )
                 } else {
                     ForEach(credentials) { credential in
@@ -34,16 +35,16 @@ struct CredentialManagerView: View {
                     }
                 }
             }
-            .navigationTitle("Credential Manager")
+            .navigationTitle(lang.s("Credential Manager", "Anmeldedaten-Manager"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Done") { dismiss() }
+                    Button(lang.s("Done", "Fertig")) { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         showAddCredential = true
                     } label: {
-                        Label("Add Credential", systemImage: "plus")
+                        Label(lang.s("Add Credential", "Anmeldedaten hinzufügen"), systemImage: "plus")
                     }
                 }
             }
@@ -66,7 +67,8 @@ struct CredentialRowView: View {
     let credential: Credential
     let onEdit: () -> Void
     let onDelete: () -> Void
-    
+    @Environment(LanguageSettings.self) private var lang
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -76,13 +78,13 @@ struct CredentialRowView: View {
                 Text(credential.name)
                     .font(.headline)
                 Spacer()
-                Button("Edit") {
+                Button(lang.s("Edit", "Bearbeiten")) {
                     onEdit()
                 }
                 .buttonStyle(.plain)
                 .font(.caption)
             }
-            
+
             Text(credential.displayText)
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -92,15 +94,15 @@ struct CredentialRowView: View {
             Button {
                 onEdit()
             } label: {
-                Label("Edit", systemImage: "pencil")
+                Label(lang.s("Edit", "Bearbeiten"), systemImage: "pencil")
             }
-            
+
             Divider()
-            
+
             Button(role: .destructive) {
                 onDelete()
             } label: {
-                Label("Delete", systemImage: "trash")
+                Label(lang.s("Delete", "Löschen"), systemImage: "trash")
             }
         }
     }
@@ -111,55 +113,56 @@ struct CredentialRowView: View {
 struct AddCredentialView: View {
     let onSave: (Credential) -> Void
     @Environment(\.dismiss) private var dismiss
-    
+    @Environment(LanguageSettings.self) private var lang
+
     @State private var name = ""
     @State private var username = ""
     @State private var useKeyAuth = true
     @State private var identityFile = ""
     @State private var password = ""
-    
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Credential Details") {
-                    TextField("Name", text: $name)
-                        .help("A descriptive name for this credential set")
-                    TextField("Username", text: $username)
+                Section(lang.s("Credential Details", "Anmeldedaten-Details")) {
+                    TextField(lang.s("Name", "Name"), text: $name)
+                        .help(lang.s("A descriptive name for this credential set", "Ein beschreibender Name für diesen Anmeldedatensatz"))
+                    TextField(lang.s("Username", "Benutzername"), text: $username)
                 }
-                
-                Section("Authentication") {
-                    Picker("Method", selection: $useKeyAuth) {
-                        Text("SSH Key / Agent").tag(true)
-                        Text("Password").tag(false)
+
+                Section(lang.s("Authentication", "Authentifizierung")) {
+                    Picker(lang.s("Method", "Methode"), selection: $useKeyAuth) {
+                        Text(lang.s("SSH Key / Agent", "SSH-Schlüssel / Agent")).tag(true)
+                        Text(lang.s("Password", "Passwort")).tag(false)
                     }
                     .pickerStyle(.segmented)
-                    
+
                     if useKeyAuth {
                         HStack {
-                            TextField("Identity file (leave blank for default/agent)", text: $identityFile)
-                            Button("Browse…") { browseForKey() }
+                            TextField(lang.s("Identity file (leave blank for default/agent)", "Identitätsdatei (leer lassen für Standard/Agent)"), text: $identityFile)
+                            Button(lang.s("Browse…", "Durchsuchen…")) { browseForKey() }
                         }
-                        .help("Path to private key file, or leave blank to use SSH agent")
+                        .help(lang.s("Path to private key file, or leave blank to use SSH agent", "Pfad zur privaten Schlüsseldatei oder leer lassen für SSH-Agent"))
                     } else {
-                        SecureField("Password", text: $password)
-                            .help("Password will be stored securely in Keychain")
+                        SecureField(lang.s("Password", "Passwort"), text: $password)
+                            .help(lang.s("Password will be stored securely in Keychain", "Passwort wird sicher in der Keychain gespeichert"))
                     }
                 }
-                
+
                 Section {
-                    Text("Credentials are stored securely and can be reused across multiple connections.")
+                    Text(lang.s("Credentials are stored securely and can be reused across multiple connections.", "Anmeldedaten werden sicher gespeichert und können für mehrere Verbindungen verwendet werden."))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Add Credential")
+            .navigationTitle(lang.s("Add Credential", "Anmeldedaten hinzufügen"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
+                    Button(lang.s("Cancel", "Abbrechen")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Add") {
+                    Button(lang.s("Add", "Hinzufügen")) {
                         save()
                     }
                     .disabled(name.isEmpty || username.isEmpty)
@@ -168,7 +171,7 @@ struct AddCredentialView: View {
         }
         .frame(width: 500, height: 400)
     }
-    
+
     private func browseForKey() {
         let panel = NSOpenPanel()
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh")
@@ -178,7 +181,7 @@ struct AddCredentialView: View {
             identityFile = panel.url?.path ?? ""
         }
     }
-    
+
     private func save() {
         let credential = Credential(
             name: name,
@@ -197,34 +200,35 @@ struct AddCredentialView: View {
 struct EditCredentialView: View {
     @Bindable var credential: Credential
     @Environment(\.dismiss) private var dismiss
-    
+    @Environment(LanguageSettings.self) private var lang
+
     @State private var password = ""
-    
+
     var body: some View {
         NavigationStack {
             Form {
-                Section("Credential Details") {
-                    TextField("Name", text: $credential.name)
-                        .help("A descriptive name for this credential set")
-                    TextField("Username", text: $credential.username)
+                Section(lang.s("Credential Details", "Anmeldedaten-Details")) {
+                    TextField(lang.s("Name", "Name"), text: $credential.name)
+                        .help(lang.s("A descriptive name for this credential set", "Ein beschreibender Name für diesen Anmeldedatensatz"))
+                    TextField(lang.s("Username", "Benutzername"), text: $credential.username)
                 }
-                
-                Section("Authentication") {
-                    Picker("Method", selection: $credential.useKeyAuth) {
-                        Text("SSH Key / Agent").tag(true)
-                        Text("Password").tag(false)
+
+                Section(lang.s("Authentication", "Authentifizierung")) {
+                    Picker(lang.s("Method", "Methode"), selection: $credential.useKeyAuth) {
+                        Text(lang.s("SSH Key / Agent", "SSH-Schlüssel / Agent")).tag(true)
+                        Text(lang.s("Password", "Passwort")).tag(false)
                     }
                     .pickerStyle(.segmented)
-                    
+
                     if credential.useKeyAuth {
                         HStack {
-                            TextField("Identity file (leave blank for default/agent)", text: $credential.identityFile)
-                            Button("Browse…") { browseForKey() }
+                            TextField(lang.s("Identity file (leave blank for default/agent)", "Identitätsdatei (leer lassen für Standard/Agent)"), text: $credential.identityFile)
+                            Button(lang.s("Browse…", "Durchsuchen…")) { browseForKey() }
                         }
-                        .help("Path to private key file, or leave blank to use SSH agent")
+                        .help(lang.s("Path to private key file, or leave blank to use SSH agent", "Pfad zur privaten Schlüsseldatei oder leer lassen für SSH-Agent"))
                     } else {
-                        SecureField("Password", text: $password, prompt: Text("Leave blank to keep existing"))
-                            .help("Enter new password or leave blank to keep existing")
+                        SecureField(lang.s("Password", "Passwort"), text: $password, prompt: Text(lang.s("Leave blank to keep existing", "Leer lassen, um vorhandenes beizubehalten")))
+                            .help(lang.s("Enter new password or leave blank to keep existing", "Neues Passwort eingeben oder leer lassen"))
                             .onAppear {
                                 // Don't pre-fill password for security
                                 password = ""
@@ -233,10 +237,10 @@ struct EditCredentialView: View {
                 }
             }
             .formStyle(.grouped)
-            .navigationTitle("Edit Credential")
+            .navigationTitle(lang.s("Edit Credential", "Anmeldedaten bearbeiten"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") {
+                    Button(lang.s("Done", "Fertig")) {
                         // Only update password if a new one was entered
                         if !password.isEmpty {
                             credential.password = password
@@ -248,7 +252,7 @@ struct EditCredentialView: View {
         }
         .frame(width: 500, height: 400)
     }
-    
+
     private func browseForKey() {
         let panel = NSOpenPanel()
         panel.directoryURL = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".ssh")
