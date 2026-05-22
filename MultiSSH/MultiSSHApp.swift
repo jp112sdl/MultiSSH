@@ -20,9 +20,12 @@ struct MultiSSHApp: App {
         }
     }()
 
+    @State private var languageSettings = LanguageSettings()
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(languageSettings)
         }
         .modelContainer(sharedModelContainer)
         .defaultSize(width: 1100, height: 700)
