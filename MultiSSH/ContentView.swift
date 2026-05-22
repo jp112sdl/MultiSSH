@@ -1199,7 +1199,7 @@ struct EditConnectionView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 480, height: useCredential ? 420 : 520)
+        .frame(width: 480, height: useCredential ? 420 : 525)
         .navigationTitle("Edit: \(connection.name)")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
