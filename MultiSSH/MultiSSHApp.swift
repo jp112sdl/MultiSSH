@@ -12,9 +12,21 @@ import SwiftData
 struct MultiSSHApp: App {
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([SSHConnection.self, ConnectionFolder.self, Credential.self])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
+        
+        // Create custom URL in ~/Library/Application Support/MultiSSH
+        let appSupportURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let multiSSHURL = appSupportURL.appendingPathComponent("MultiSSH", isDirectory: true)
+        
+        // Ensure the directory exists
+        try? FileManager.default.createDirectory(at: multiSSHURL, withIntermediateDirectories: true)
+        
+        let storeURL = multiSSHURL.appendingPathComponent("default.store")
+        let modelConfiguration = ModelConfiguration(url: storeURL)
+        
         do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
+            let container = try ModelContainer(for: schema, configurations: [modelConfiguration])
+            print("[MultiSSH] SwiftData store: \(storeURL.path)")
+            return container
         } catch {
             fatalError("Could not create ModelContainer: \(error)")
         }
