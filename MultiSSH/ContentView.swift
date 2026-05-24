@@ -378,6 +378,7 @@ struct ContentView: View {
                             systemImage: "terminal",
                             description: Text(lang.s("Connect to a server from the sidebar to get started", "Verbinden Sie sich über die Seitenleiste mit einem Server"))
                         )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         // Toolbar for sync resize control
                         HStack {
