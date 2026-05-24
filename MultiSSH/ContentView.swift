@@ -681,12 +681,13 @@ struct ConnectionRowView: View {
     let onCiscoConfig: (() -> Void)?
     @Environment(LanguageSettings.self) private var lang
 
-    init(connection: SSHConnection, isConnected: Bool,
+    init(connection: SSHConnection, isConnected: Bool, folderColor: Color? = nil,
          onConnect: @escaping () -> Void, onDisconnect: @escaping () -> Void,
          onEdit: @escaping () -> Void, onClone: @escaping () -> Void,
          onDelete: @escaping () -> Void, onCiscoConfig: (() -> Void)? = nil) {
         self.connection = connection
         self.isConnected = isConnected
+        self.folderColor = folderColor
         self.onConnect = onConnect
         self.onDisconnect = onDisconnect
         self.onEdit = onEdit
