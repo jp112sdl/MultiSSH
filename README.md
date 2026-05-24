@@ -2,4 +2,4 @@
 
 Config file
 
-`'~/Library/Application Support/MultiSSH'`
+`~/Library/Application Support/MultiSSH`
