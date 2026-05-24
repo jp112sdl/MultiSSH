@@ -194,6 +194,7 @@ struct ContentView: View {
                                 ConnectionRowView(
                                     connection: connection,
                                     isConnected: manager.session(for: connection) != nil,
+                                    folderColor: folder.color,
                                     onConnect: { manager.connect(connection) },
                                     onDisconnect: { manager.disconnect(connection) },
                                     onEdit: { editingConnection = connection },
@@ -512,6 +513,7 @@ struct ContentView: View {
 struct ConnectionRowView: View {
     let connection: SSHConnection
     let isConnected: Bool
+    var folderColor: Color? = nil
     let onConnect: () -> Void
     let onDisconnect: () -> Void
     let onEdit: () -> Void
@@ -527,6 +529,7 @@ struct ConnectionRowView: View {
                     .frame(width: 8, height: 8)
                 Text(connection.name)
                     .fontWeight(.medium)
+                    .foregroundStyle(folderColor ?? .primary)
                 Spacer()
                 if isConnected {
                     Button(lang.s("Disconnect", "Trennen"), action: onDisconnect)
