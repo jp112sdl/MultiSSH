@@ -81,7 +81,7 @@ jobs:
           cat checksums.txt
       
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ inputs.version }}
           name: MultiSSH v${{ inputs.version }}

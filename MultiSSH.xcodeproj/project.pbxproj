@@ -29,24 +29,12 @@
 			);
 			target = 947BB8362FBDE0DC004856E7 /* MultiSSHTests */;
 		};
-		947BB84F2FBDEC2B004856E7 /* Exceptions for "MultiSSH" folder in "MultiSSH" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				APP_ICON_GUIDE.md,
-				FOLDER_ORGANIZATION_GUIDE.md,
-				FONT_SCALING_GUIDE.md,
-				generate_icon.sh,
-				PASSWORD_SECURITY.md,
-			);
-			target = 9441EB172FBCBE2000575C12 /* MultiSSH */;
-		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		9441EB1A2FBCBE2000575C12 /* MultiSSH */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				947BB84F2FBDEC2B004856E7 /* Exceptions for "MultiSSH" folder in "MultiSSH" target */,
 				947BB8452FBDE14A004856E7 /* Exceptions for "MultiSSH" folder in "MultiSSHTests" target */,
 			);
 			path = MultiSSH;
