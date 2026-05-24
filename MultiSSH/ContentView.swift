@@ -34,6 +34,7 @@ struct ContentView: View {
     @State private var isDropTargetingUnfoldered = false
     @State private var detailViewSize: CGSize = .zero
     @State private var showCredentialManager = false
+    @State private var ciscoConfigConnection: SSHConnection?
     @Environment(LanguageSettings.self) private var lang
 
     private var columns: [GridItem] {
@@ -159,7 +160,8 @@ struct ContentView: View {
                                     manager.disconnect(connection)
                                     connection.deletePassword()
                                     modelContext.delete(connection)
-                                }
+                                },
+                                onCiscoConfig: connection.isCiscoDevice ? { ciscoConfigConnection = connection } : nil
                             )
                         }
                     }
@@ -202,7 +204,8 @@ struct ContentView: View {
                                         manager.disconnect(connection)
                                         connection.deletePassword()
                                         modelContext.delete(connection)
-                                    }
+                                    },
+                                    onCiscoConfig: connection.isCiscoDevice ? { ciscoConfigConnection = connection } : nil
                                 )
                             }
                         }
@@ -503,6 +506,162 @@ struct ContentView: View {
         .sheet(isPresented: $showCredentialManager) {
             CredentialManagerView()
         }
+        .sheet(item: $ciscoConfigConnection) { connection in
+            CiscoConfigSheet(connection: connection)
+        }
+    }
+}
+
+// MARK: - Cisco Config Sheet
+
+struct CiscoConfigSheet: View {
+    let connection: SSHConnection
+    @Environment(\.dismiss) private var dismiss
+    @Environment(LanguageSettings.self) private var lang
+    @State private var downloader = CiscoConfigDownloader()
+    @State private var showConfig = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Header
+            HStack(spacing: 10) {
+                Image(systemName: "switch.2")
+                    .font(.title2)
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(connection.name)
+                        .font(.headline)
+                    Text(downloader.statusMessage.isEmpty ? lang.s("Starting...", "Starte...") : downloader.statusMessage)
+                        .font(.caption)
+                        .foregroundStyle(stateColor)
+                }
+                Spacer()
+                if downloader.isRunning {
+                    ProgressView()
+                        .scaleEffect(0.75)
+                }
+                if case .done = downloader.state {
+                    Picker("", selection: $showConfig) {
+                        Label(lang.s("Log", "Protokoll"), systemImage: "terminal").tag(false)
+                        Label(lang.s("Config", "Konfiguration"), systemImage: "doc.text").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 200)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color(NSColor.windowBackgroundColor))
+
+            Divider()
+
+            // Main content
+            Group {
+                if showConfig, case .done = downloader.state {
+                    configView
+                } else {
+                    liveOutputView
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Divider()
+
+            // Footer
+            HStack {
+                Button(lang.s("Close", "Schließen")) {
+                    downloader.cancel()
+                    dismiss()
+                }
+
+                Spacer()
+
+                if case .failed = downloader.state {
+                    Button(lang.s("Retry", "Wiederholen")) {
+                        showConfig = false
+                        downloader.start(connection: connection)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+
+                if case .done = downloader.state {
+                    Button {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(downloader.configOutput, forType: .string)
+                    } label: {
+                        Label(lang.s("Copy Config", "Config kopieren"), systemImage: "doc.on.doc")
+                    }
+
+                    Button {
+                        downloader.saveToFile(suggestedName: "\(connection.name)-running-config.txt")
+                    } label: {
+                        Label(lang.s("Save…", "Speichern…"), systemImage: "square.and.arrow.down")
+                    }
+                    .buttonStyle(.borderedProminent)
+                } else if downloader.isRunning {
+                    Button(lang.s("Cancel", "Abbrechen"), role: .destructive) {
+                        downloader.cancel()
+                    }
+                }
+            }
+            .padding()
+        }
+        .frame(width: 760, height: 540)
+        .onAppear {
+            downloader.start(connection: connection)
+        }
+        .onChange(of: downloader.state.isDone) { _, done in
+            if done { showConfig = true }
+        }
+    }
+
+    // MARK: - Subviews
+
+    private var liveOutputView: some View {
+        ScrollViewReader { proxy in
+            ScrollView {
+                Text(downloader.liveOutput)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(Color(NSColor.labelColor))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(10)
+                    .id("bottom")
+                    .textSelection(.enabled)
+            }
+            .background(Color(NSColor.textBackgroundColor))
+            .onChange(of: downloader.liveOutput) { _, _ in
+                withAnimation(.easeOut(duration: 0.1)) {
+                    proxy.scrollTo("bottom", anchor: .bottom)
+                }
+            }
+        }
+    }
+
+    private var configView: some View {
+        ScrollView {
+            Text(downloader.configOutput)
+                .font(.system(.caption, design: .monospaced))
+                .foregroundStyle(Color(NSColor.labelColor))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .textSelection(.enabled)
+        }
+        .background(Color(NSColor.textBackgroundColor))
+    }
+
+    private var stateColor: Color {
+        switch downloader.state {
+        case .done: return .green
+        case .failed: return .red
+        default: return .secondary
+        }
+    }
+}
+
+extension CiscoConfigDownloader.State {
+    var isDone: Bool {
+        if case .done = self { return true }
+        return false
     }
 }
 
@@ -516,7 +675,22 @@ struct ConnectionRowView: View {
     let onEdit: () -> Void
     let onClone: () -> Void
     let onDelete: () -> Void
+    let onCiscoConfig: (() -> Void)?
     @Environment(LanguageSettings.self) private var lang
+
+    init(connection: SSHConnection, isConnected: Bool,
+         onConnect: @escaping () -> Void, onDisconnect: @escaping () -> Void,
+         onEdit: @escaping () -> Void, onClone: @escaping () -> Void,
+         onDelete: @escaping () -> Void, onCiscoConfig: (() -> Void)? = nil) {
+        self.connection = connection
+        self.isConnected = isConnected
+        self.onConnect = onConnect
+        self.onDisconnect = onDisconnect
+        self.onEdit = onEdit
+        self.onClone = onClone
+        self.onDelete = onDelete
+        self.onCiscoConfig = onCiscoConfig
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -526,6 +700,12 @@ struct ConnectionRowView: View {
                     .frame(width: 8, height: 8)
                 Text(connection.name)
                     .fontWeight(.medium)
+                if connection.isCiscoDevice {
+                    Image(systemName: "switch.2")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
+                        .help(lang.s("Cisco Device", "Cisco-Gerät"))
+                }
                 Spacer()
                 if isConnected {
                     Button(lang.s("Disconnect", "Trennen"), action: onDisconnect)
@@ -562,30 +742,39 @@ struct ConnectionRowView: View {
                 Label(lang.s("Connect", "Verbinden"), systemImage: "play.circle")
             }
             .disabled(isConnected)
-            
+
             Button {
                 onDisconnect()
             } label: {
                 Label(lang.s("Disconnect", "Trennen"), systemImage: "stop.circle")
             }
             .disabled(!isConnected)
-            
+
+            if connection.isCiscoDevice {
+                Divider()
+                Button {
+                    onCiscoConfig?()
+                } label: {
+                    Label(lang.s("Download Running Config", "Running-Config herunterladen"), systemImage: "arrow.down.doc")
+                }
+            }
+
             Divider()
-            
+
             Button {
                 onEdit()
             } label: {
                 Label(lang.s("Edit", "Bearbeiten"), systemImage: "pencil")
             }
-            
+
             Button {
                 onClone()
             } label: {
                 Label(lang.s("Duplicate", "Duplizieren"), systemImage: "doc.on.doc")
             }
-            
+
             Divider()
-            
+
             Button(role: .destructive) {
                 onDelete()
             } label: {
@@ -1021,6 +1210,7 @@ struct AddConnectionView: View {
     @State private var identityFile = ""
     @State private var password = ""
     @State private var selectedFolder: ConnectionFolder?
+    @State private var isCiscoDevice = false
 
     var body: some View {
         Form {
@@ -1031,6 +1221,7 @@ struct AddConnectionView: View {
                         if name.isEmpty { name = host }
                     }
                 TextField(lang.s("Port", "Port"), text: $port)
+                Toggle(lang.s("Cisco Device (IOS/IOS-XE)", "Cisco-Gerät (IOS/IOS-XE)"), isOn: $isCiscoDevice)
             }
             
             Section(lang.s("Organization", "Organisation")) {
@@ -1126,6 +1317,7 @@ struct AddConnectionView: View {
             useKeyAuth: useCredential ? true : useKeyAuth,
             identityFile: useCredential ? "" : identityFile,
             password: useCredential ? "" : password,
+            isCiscoDevice: isCiscoDevice,
             folder: selectedFolder,
             credential: useCredential ? selectedCredential : nil
         )
@@ -1150,8 +1342,9 @@ struct EditConnectionView: View {
                 TextField(lang.s("Display name", "Anzeigename"), text: $connection.name)
                 TextField(lang.s("Hostname or IP", "Hostname oder IP"), text: $connection.host)
                 TextField(lang.s("Port", "Port"), value: $connection.port, format: .number)
+                Toggle(lang.s("Cisco Device (IOS/IOS-XE)", "Cisco-Gerät (IOS/IOS-XE)"), isOn: $connection.isCiscoDevice)
             }
-            
+
             Section(lang.s("Organization", "Organisation")) {
                 Picker(lang.s("Folder", "Ordner"), selection: $connection.folder) {
                     Text(lang.s("None", "Kein")).tag(nil as ConnectionFolder?)

@@ -9,7 +9,8 @@ final class SSHConnection {
     var username: String = ""
     var useKeyAuth: Bool = true
     var identityFile: String = ""
-    
+    var isCiscoDevice: Bool = false
+
     // Relationship to folder
     var folder: ConnectionFolder?
     
@@ -22,7 +23,8 @@ final class SSHConnection {
 
     init(name: String = "New Connection", host: String = "", port: Int = 22,
          username: String = "", useKeyAuth: Bool = true,
-         identityFile: String = "", password: String = "", 
+         identityFile: String = "", password: String = "",
+         isCiscoDevice: Bool = false,
          folder: ConnectionFolder? = nil, credential: Credential? = nil) {
         self.name = name
         self.host = host
@@ -31,6 +33,7 @@ final class SSHConnection {
         self.useKeyAuth = useKeyAuth
         self.identityFile = identityFile
         self._password = password
+        self.isCiscoDevice = isCiscoDevice
         self.folder = folder
         self.credential = credential
     }
