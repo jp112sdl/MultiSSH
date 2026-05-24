@@ -703,12 +703,15 @@ struct ConnectionRowView: View {
                     .frame(width: 8, height: 8)
                 Text(connection.name)
                     .fontWeight(.medium)
+                    .foregroundStyle(folderColor ?? .primary)
+
                 if connection.isCiscoDevice {
                     Image(systemName: "switch.2")
                         .font(.caption2)
                         .foregroundStyle(.orange)
                         .help(lang.s("Cisco Device", "Cisco-Gerät"))
                 }
+
                 Spacer()
                 if isConnected {
                     Button(lang.s("Disconnect", "Trennen"), action: onDisconnect)
