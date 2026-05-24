@@ -196,6 +196,7 @@ struct ContentView: View {
                                 ConnectionRowView(
                                     connection: connection,
                                     isConnected: manager.session(for: connection) != nil,
+                                    folderColor: folder.color,
                                     onConnect: { manager.connect(connection) },
                                     onDisconnect: { manager.disconnect(connection) },
                                     onEdit: { editingConnection = connection },
@@ -381,6 +382,7 @@ struct ContentView: View {
                             systemImage: "terminal",
                             description: Text(lang.s("Connect to a server from the sidebar to get started", "Verbinden Sie sich über die Seitenleiste mit einem Server"))
                         )
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
                         // Toolbar for sync resize control
                         HStack {
@@ -670,6 +672,7 @@ extension CiscoConfigDownloader.State {
 struct ConnectionRowView: View {
     let connection: SSHConnection
     let isConnected: Bool
+    var folderColor: Color? = nil
     let onConnect: () -> Void
     let onDisconnect: () -> Void
     let onEdit: () -> Void
