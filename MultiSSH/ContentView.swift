@@ -1292,7 +1292,7 @@ struct AddConnectionView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 480, height: useCredential ? 420 : 520)
+        .frame(width: 480, height: useCredential ? 440 : 550)
         .navigationTitle(lang.s("Add Connection", "Verbindung hinzufügen"))
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -1417,7 +1417,7 @@ struct EditConnectionView: View {
             }
         }
         .formStyle(.grouped)
-        .frame(width: 480, height: useCredential ? 420 : 525)
+        .frame(width: 480, height: useCredential ? 440 : 550)
         .navigationTitle(lang.s("Edit", "Bearbeiten") + ": \(connection.name)")
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
