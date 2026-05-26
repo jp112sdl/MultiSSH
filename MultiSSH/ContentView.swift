@@ -1354,8 +1354,47 @@ struct EditConnectionView: View {
     @Environment(\.dismiss) private var dismiss
     @Query(sort: \Credential.sortOrder) private var credentials: [Credential]
     @Environment(LanguageSettings.self) private var lang
-    
+
     @State private var useCredential: Bool = false
+
+    // Snapshot for discard
+    @State private var originalName: String = ""
+    @State private var originalHost: String = ""
+    @State private var originalPort: Int = 22
+    @State private var originalIsCiscoDevice: Bool = false
+    @State private var originalFolder: ConnectionFolder? = nil
+    @State private var originalUsername: String = ""
+    @State private var originalUseKeyAuth: Bool = false
+    @State private var originalIdentityFile: String = ""
+    @State private var originalPassword: String = ""
+    @State private var originalCredential: Credential? = nil
+
+    private func saveSnapshot() {
+        originalName = connection.name
+        originalHost = connection.host
+        originalPort = connection.port
+        originalIsCiscoDevice = connection.isCiscoDevice
+        originalFolder = connection.folder
+        originalUsername = connection.username
+        originalUseKeyAuth = connection.useKeyAuth
+        originalIdentityFile = connection.identityFile
+        originalPassword = connection.password
+        originalCredential = connection.credential
+    }
+
+    private func discardChanges() {
+        connection.name = originalName
+        connection.host = originalHost
+        connection.port = originalPort
+        connection.isCiscoDevice = originalIsCiscoDevice
+        connection.folder = originalFolder
+        connection.username = originalUsername
+        connection.useKeyAuth = originalUseKeyAuth
+        connection.identityFile = originalIdentityFile
+        connection.password = originalPassword
+        connection.credential = originalCredential
+        dismiss()
+    }
 
     var body: some View {
         Form {
@@ -1434,12 +1473,16 @@ struct EditConnectionView: View {
         .frame(width: 480, height: useCredential ? 440 : 550)
         .navigationTitle(lang.s("Edit", "Bearbeiten") + ": \(connection.name)")
         .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button(lang.s("Discard", "Verwerfen")) { discardChanges() }
+            }
             ToolbarItem(placement: .confirmationAction) {
                 Button(lang.s("Done", "Fertig")) { dismiss() }
             }
         }
         .onAppear {
             useCredential = connection.credential != nil
+            saveSnapshot()
         }
     }
 
