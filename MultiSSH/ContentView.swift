@@ -35,6 +35,7 @@ struct ContentView: View {
     @State private var detailViewSize: CGSize = .zero
     @State private var showCredentialManager = false
     @State private var ciscoConfigConnection: SSHConnection?
+    @State private var connectionToDelete: SSHConnection?
     @Environment(LanguageSettings.self) private var lang
 
     private var columns: [GridItem] {
@@ -157,11 +158,7 @@ struct ContentView: View {
                                 onDisconnect: { manager.disconnect(connection) },
                                 onEdit: { editingConnection = connection },
                                 onClone: { cloneConnection(connection) },
-                                onDelete: {
-                                    manager.disconnect(connection)
-                                    connection.deletePassword()
-                                    modelContext.delete(connection)
-                                },
+                                onDelete: { connectionToDelete = connection },
                                 onCiscoConfig: connection.isCiscoDevice ? { ciscoConfigConnection = connection } : nil
                             )
                         }
@@ -202,11 +199,7 @@ struct ContentView: View {
                                     onDisconnect: { manager.disconnect(connection) },
                                     onEdit: { editingConnection = connection },
                                     onClone: { cloneConnection(connection) },
-                                    onDelete: {
-                                        manager.disconnect(connection)
-                                        connection.deletePassword()
-                                        modelContext.delete(connection)
-                                    },
+                                    onDelete: { connectionToDelete = connection },
                                     onCiscoConfig: connection.isCiscoDevice ? { ciscoConfigConnection = connection } : nil
                                 )
                             }
@@ -511,6 +504,26 @@ struct ContentView: View {
         }
         .sheet(item: $ciscoConfigConnection) { connection in
             CiscoConfigSheet(connection: connection)
+        }
+        .alert(
+            lang.s("Delete Connection", "Verbindung löschen"),
+            isPresented: Binding(
+                get: { connectionToDelete != nil },
+                set: { if !$0 { connectionToDelete = nil } }
+            ),
+            presenting: connectionToDelete
+        ) { connection in
+            Button(lang.s("Delete", "Löschen"), role: .destructive) {
+                manager.disconnect(connection)
+                connection.deletePassword()
+                modelContext.delete(connection)
+                connectionToDelete = nil
+            }
+            Button(lang.s("Cancel", "Abbrechen"), role: .cancel) {
+                connectionToDelete = nil
+            }
+        } message: { connection in
+            Text(lang.s("Are you sure you want to delete \"\(connection.name)\"?", "Soll \"\(connection.name)\" wirklich gelöscht werden?"))
         }
     }
 }
