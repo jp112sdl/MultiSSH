@@ -140,6 +140,7 @@ struct ContentView: View {
         )
         modelContext.insert(clonedConnection)
         try? modelContext.save()
+        editingConnection = clonedConnection
     }
 
     var body: some View {
