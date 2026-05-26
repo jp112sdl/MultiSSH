@@ -368,115 +368,112 @@ struct ContentView: View {
                 }
             }
         } detail: {
-            GeometryReader { geometry in
-                VStack(spacing: 0) {
-                    if manager.sessions.isEmpty {
-                        ContentUnavailableView(
-                            lang.s("No Active Connections", "Keine aktiven Verbindungen"),
-                            systemImage: "terminal",
-                            description: Text(lang.s("Connect to a server from the sidebar to get started", "Verbinden Sie sich über die Seitenleiste mit einem Server"))
-                        )
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        // Toolbar for sync resize control
-                        HStack {
-                            Toggle(lang.s("Auto-scale", "Auto-Skalierung"), isOn: $syncResize)
-                                .toggleStyle(.checkbox)
-                                .font(.caption)
-                                .help(lang.s("Automatically scale terminals to fill available space", "Terminals automatisch auf den verfügbaren Platz skalieren"))
-                            
-                            if !syncResize {
-                                Text("W:")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Slider(value: $terminalWidth, in: 300...1024, step: 10)
-                                    .frame(width: 100)
-                                Text("\(Int(terminalWidth))px")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 45, alignment: .leading)
-                                
-                                Text("H:")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                Slider(value: $terminalHeight, in: 200...1024, step: 10)
-                                    .frame(width: 100)
-                                Text("\(Int(terminalHeight))px")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 45, alignment: .leading)
-                            }
-                            
-                            Divider()
-                                .frame(height: 16)
-                            
-                            Text("Font:")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                            Slider(value: $fontSize, in: 8...24, step: 1)
-                                .frame(width: 100)
-                            Text("\(Int(fontSize))pt")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 35, alignment: .leading)
-                            Button {
-                                fontSize = 11
-                            } label: {
-                                Image(systemName: "arrow.counterclockwise")
-                                    .font(.caption)
-                            }
-                            .buttonStyle(.plain)
-                            .help(lang.s("Reset font size to 11pt", "Schriftgröße auf 11 Pt. zurücksetzen"))
-                            
-                            Divider()
-                                .frame(height: 16)
-                            
-                            Button {
-                                showSyntaxSettings = true
-                            } label: {
-                                Image(systemName: "paintbrush")
-                                    .font(.caption)
-                            }
-                            .buttonStyle(.plain)
-                            .help(lang.s("Syntax highlighting settings", "Syntax-Hervorhebungseinstellungen"))
-                            
-                            Spacer()
-                        }
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .background(Color(NSColor.controlBackgroundColor))
-                        
-                        Divider()
-                        
-                        ScrollView {
-                            let dynamicSize = calculateDynamicSize()
-                            LazyVGrid(columns: columns, spacing: 8) {
-                                ForEach(manager.sessions) { session in
-                                    TerminalPaneView(
-                                        session: session,
-                                        width: syncResize ? .constant(dynamicSize.width) : $terminalWidth,
-                                        height: syncResize ? .constant(dynamicSize.height) : $terminalHeight,
-                                        fontSize: fontSize,
-                                        syntaxHighlights: manager.syntaxHighlights,
-                                        onDisconnect: {
-                                            manager.disconnect(session.connection)
-                                        }
-                                    )
-                                }
-                            }
-                            .padding(8)
-                        }
-                    }
+            VStack(spacing: 0) {
+                if manager.sessions.isEmpty {
+                    ContentUnavailableView(
+                        lang.s("No Active Connections", "Keine aktiven Verbindungen"),
+                        systemImage: "terminal",
+                        description: Text(lang.s("Connect to a server from the sidebar to get started", "Verbinden Sie sich über die Seitenleiste mit einem Server"))
+                    )
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    // Toolbar for sync resize control
+                    HStack {
+                        Toggle(lang.s("Auto-scale", "Auto-Skalierung"), isOn: $syncResize)
+                            .toggleStyle(.checkbox)
+                            .font(.caption)
+                            .help(lang.s("Automatically scale terminals to fill available space", "Terminals automatisch auf den verfügbaren Platz skalieren"))
 
-                    if !manager.sessions.isEmpty {
-                        BroadcastInputView(manager: manager)
+                        if !syncResize {
+                            Text("W:")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Slider(value: $terminalWidth, in: 300...1024, step: 10)
+                                .frame(width: 100)
+                            Text("\(Int(terminalWidth))px")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 45, alignment: .leading)
+
+                            Text("H:")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            Slider(value: $terminalHeight, in: 200...1024, step: 10)
+                                .frame(width: 100)
+                            Text("\(Int(terminalHeight))px")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .frame(width: 45, alignment: .leading)
+                        }
+
+                        Divider()
+                            .frame(height: 16)
+
+                        Text("Font:")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Slider(value: $fontSize, in: 8...24, step: 1)
+                            .frame(width: 100)
+                        Text("\(Int(fontSize))pt")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .frame(width: 35, alignment: .leading)
+                        Button {
+                            fontSize = 11
+                        } label: {
+                            Image(systemName: "arrow.counterclockwise")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help(lang.s("Reset font size to 11pt", "Schriftgröße auf 11 Pt. zurücksetzen"))
+
+                        Divider()
+                            .frame(height: 16)
+
+                        Button {
+                            showSyntaxSettings = true
+                        } label: {
+                            Image(systemName: "paintbrush")
+                                .font(.caption)
+                        }
+                        .buttonStyle(.plain)
+                        .help(lang.s("Syntax highlighting settings", "Syntax-Hervorhebungseinstellungen"))
+
+                        Spacer()
                     }
-                }
-                .onAppear {
-                    detailViewSize = geometry.size
-                }
-                .onChange(of: geometry.size) { _, newSize in
-                    detailViewSize = newSize
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Color(NSColor.controlBackgroundColor))
+
+                    Divider()
+
+                    ScrollView {
+                        let dynamicSize = calculateDynamicSize()
+                        LazyVGrid(columns: columns, spacing: 8) {
+                            ForEach(manager.sessions) { session in
+                                TerminalPaneView(
+                                    session: session,
+                                    width: syncResize ? .constant(dynamicSize.width) : $terminalWidth,
+                                    height: syncResize ? .constant(dynamicSize.height) : $terminalHeight,
+                                    fontSize: fontSize,
+                                    syntaxHighlights: manager.syntaxHighlights,
+                                    onDisconnect: {
+                                        manager.disconnect(session.connection)
+                                    }
+                                )
+                            }
+                        }
+                        .padding(8)
+                    }
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear
+                                .onAppear { detailViewSize = geo.size }
+                                .onChange(of: geo.size) { _, newSize in detailViewSize = newSize }
+                        }
+                    )
+
+                    BroadcastInputView(manager: manager)
                 }
             }
         }
